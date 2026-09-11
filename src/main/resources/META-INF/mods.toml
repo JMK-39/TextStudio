@@ -1,0 +1,33 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="LGPLv3"
+
+[[mods]]
+modId="textstudio"
+version="${file.jarVersion}"
+displayName="Text Studio"
+authors="XYAT"
+description='''
+Text rendering effects and chat presentation tools.
+'''
+
+[[dependencies.textstudio]]
+modId="forge"
+mandatory=true
+versionRange="[47,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.textstudio]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.20.1,1.21)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.textstudio]]
+modId="kineticcore"
+mandatory=true
+versionRange="[26.9.8,)"
+ordering="AFTER"
+side="BOTH"

@@ -1,0 +1,24 @@
+{
+  "minVersion": "0.8",
+  "package": "dev.xyat.textstudio.font.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "refmap": "textstudio.mixins.refmap.json",
+  "mixins": [
+    "EntitySelectorTweaks",
+    "PlayerListTweaks",
+    "AuthorCoreMixins",
+    "StyleMixin",
+    "StyleSerializerMixin",
+    "AnvilMenuTextLengthMixin"
+  ],
+  "client": [
+    "client.EntityArgumentSuggestionMixin",
+    "client.PlayerTabOverlayTweaks",
+    "client.StringDecomposerAccess",
+    "client.CompatibleFontMixin",
+    "client.ChatComponentMixin",
+    "client.GuiGraphicsMixin",
+    "client.EditBoxTextLengthMixin",
+    "client.SignEditTextInputMixin"
+  ]
+}
