@@ -18,14 +18,12 @@ The project is designed around in-game administration. Where a feature changes s
 - Chat presentation controls for long messages, scrolling and visual layout.
 - Configuration through KineticCore with a unified in-game interface.
 
-### Requirements and Compatibility
+### Dependencies
 
 | Type | Dependency |
 |---|---|
-| Required | Minecraft 1.20.1 |
-| Required | Minecraft Forge 47+ |
+| Required | Forge 47.4.0+ |
 | Required | KineticCore 26.9.8+ |
-| Optional | None |
 
 ### Access and Configuration
 
@@ -194,14 +192,12 @@ Primary configuration/data paths:
 - 支持长消息、滚动与聊天界面显示相关设置。
 - 通过 KineticCore 统一配置界面进行管理。
 
-### 运行环境与兼容
+### 依赖
 
 | 类型 | 依赖 |
 |---|---|
-| 必需 | Minecraft 1.20.1 |
-| 必需 | Minecraft Forge 47+ |
+| 必需 | Forge 47.4.0+ |
 | 必需 | KineticCore 26.9.8+ |
-| 可选 | 无 |
 
 ### 打开方式与配置
 

@@ -14,7 +14,7 @@ Text rendering effects and chat presentation tools.
 [[dependencies.textstudio]]
 modId="forge"
 mandatory=true
-versionRange="[47,)"
+versionRange="[47.4.0,)"
 ordering="NONE"
 side="BOTH"
 
