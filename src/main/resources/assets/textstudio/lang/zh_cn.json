@@ -466,5 +466,8 @@
   "gui.textstudio.font.editor.palette.flash.tip": "§f开启后颜色会直接跳到下一档，而不是在相邻颜色之间平滑过渡。",
   "gui.textstudio.module.name": "文本工坊",
   "gui.textstudio.module.function": "文本与聊天工具",
-  "gui.textstudio.module.tooltip": "文本特效、字体工具与聊天显示设置。"
+  "gui.textstudio.module.tooltip": "文本特效、字体工具与聊天显示设置。",
+  "chat.textstudio.timestamp": "§a[%s§a] ",
+  "chat.textstudio.compact": " §6§l×%s",
+  "mod.textstudio.name": "§6TextStudio"
 }

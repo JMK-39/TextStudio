@@ -108,9 +108,6 @@ public final class FontModuleConfigScreen extends KineticScreen {
     private record HoverTip(int x, int y, int w, int h, Component text) {
     }
 
-    private record ContextEntry(Component label, Runnable action, boolean active) {
-    }
-
     private final Screen parent;
     private final List<AuthorConfig.EffectSettings> draftEffects = new ArrayList<>();
     private final List<FieldLabel> fieldLabels = new ArrayList<>();
@@ -131,9 +128,6 @@ public final class FontModuleConfigScreen extends KineticScreen {
     private AuthorConfig.EffectSettings previewLinesEffect;
     private List<FormattedCharSequence> previewLines = List.of();
 
-    private List<ContextEntry> contextEntries = List.of();
-    private int contextX;
-    private int contextY;
 
     private record FontDraftSnapshot(List<AuthorConfig.EffectSettings> effects, int selectedPreset) {
     }
@@ -172,9 +166,8 @@ public final class FontModuleConfigScreen extends KineticScreen {
         super(Component.translatable("gui.textstudio.font.editor.title"));
         this.parent = parent;
         this.previewText = I18n.get("gui.textstudio.font.editor.preview.default");
-        useCanvas(CANVAS_W, CANVAS_H, 6);
-        maxScale = 1.0f;
-        for (AuthorConfig.EffectSettings effect : AuthorConfig.EFFECTS) {
+        useResponsiveCanvas(CANVAS_W, CANVAS_H, 6);
+for (AuthorConfig.EffectSettings effect : AuthorConfig.EFFECTS) {
             draftEffects.add(effect.copy());
         }
         if (draftEffects.isEmpty()) {
@@ -210,8 +203,7 @@ public final class FontModuleConfigScreen extends KineticScreen {
         );
 
         EditBox previewBox = getEditBox();
-        addRenderableWidget(previewBox);
-        registerTip(
+registerTip(
                 PREVIEW_X + 12,
                 PREVIEW_Y + 23,
                 302,
@@ -276,14 +268,7 @@ public final class FontModuleConfigScreen extends KineticScreen {
     }
 
     private @NotNull EditBox getEditBox() {
-        EditBox previewBox = new EditBox(
-                font,
-                PREVIEW_X + 12,
-                PREVIEW_Y + 23,
-                302,
-                18,
-                Component.translatable("gui.textstudio.font.editor.preview.input")
-        );
+        EditBox previewBox = addTextField(PREVIEW_X + 12, PREVIEW_Y + 23, 302, Component.translatable("gui.textstudio.font.editor.preview.input"));
         previewBox.setMaxLength(4096);
         previewBox.setValue(previewText);
         previewBox.setHint(Component.translatable("gui.textstudio.font.editor.preview.hint"));
@@ -309,7 +294,7 @@ public final class FontModuleConfigScreen extends KineticScreen {
     private void toggleCategoryMenu() {
         categoryMenuOpen = !categoryMenuOpen;
         closeContextMenu();
-        rebuildScreen();
+        rebuildUi();
     }
 
     private void buildCategoryMenuButtons() {
@@ -332,14 +317,11 @@ public final class FontModuleConfigScreen extends KineticScreen {
         tab = next;
         categoryMenuOpen = false;
         closeContextMenu();
-        rebuildScreen();
+        rebuildUi();
     }
 
     private Button addActionButton(Component text, int x, int y, int w, int h, Button.OnPress action, Component tip) {
-        Button button = Button.builder(text, action).bounds(x, y, w, h).build();
-        addRenderableWidget(button);
-        registerTip(x, y, w, h, tip);
-        return button;
+        return addCompactButton(x, y, w, text, tip, action);
     }
 
     private void registerTip(int x, int y, int w, int h, Component tip) {
@@ -552,14 +534,11 @@ public final class FontModuleConfigScreen extends KineticScreen {
         Component label = Component.translatable(key);
         fieldLabels.add(new FieldLabel(label, x, y + 3));
         boolean value = getter.getAsBoolean();
-        addRenderableWidget(Button.builder(
-                Component.translatable(value ? "gui.textstudio.font.editor.state.on" : "gui.textstudio.font.editor.state.off"),
-                button -> {
+        addButton(x + FIELD_CONTROL_OFFSET, y, FIELD_CONTROL_W, Component.translatable(value ? "gui.textstudio.font.editor.state.on" : "gui.textstudio.font.editor.state.off"), null, button -> {
                     setter.accept(!getter.getAsBoolean());
                     closeContextMenu();
-                    rebuildScreen();
-                }
-        ).bounds(x + FIELD_CONTROL_OFFSET, y, FIELD_CONTROL_W, FIELD_H).build());
+                    rebuildUi();
+                });
         registerTip(
                 x,
                 y - 1,
@@ -572,7 +551,7 @@ public final class FontModuleConfigScreen extends KineticScreen {
     private void addNumber(String key, int x, int y, DoubleSupplier getter, DoubleConsumer setter, double min, double max) {
         Component label = Component.translatable(key);
         fieldLabels.add(new FieldLabel(label, x, y + 3));
-        NumericEditBox box = NumericEditBox.decimal(font, x + FIELD_CONTROL_OFFSET, y, FIELD_CONTROL_W, FIELD_H, label, false, min, max);
+        NumericEditBox box = addDecimalField(x + FIELD_CONTROL_OFFSET, y, FIELD_CONTROL_W, label, false, min, max, null);
         box.setValue(NumericEditBox.format(getter.getAsDouble()));
         box.setResponder(value -> {
             Double parsed = box.getDoubleValue();
@@ -580,8 +559,7 @@ public final class FontModuleConfigScreen extends KineticScreen {
                 setter.accept(parsed);
             }
         });
-        addRenderableWidget(box);
-        registerTip(
+registerTip(
                 x,
                 y - 1,
                 FIELD_CONTROL_OFFSET + FIELD_CONTROL_W,
@@ -616,11 +594,6 @@ public final class FontModuleConfigScreen extends KineticScreen {
         );
     }
 
-    private void rebuildScreen() {
-        clearWidgets();
-        buildUi();
-    }
-
     private AuthorConfig.EffectSettings current() {
         return draftEffects.get(selectedPreset);
     }
@@ -634,7 +607,7 @@ public final class FontModuleConfigScreen extends KineticScreen {
         presetScroll = maxPresetScroll();
         tab = EditorTab.COLOR;
         closeContextMenu();
-        rebuildScreen();
+        rebuildUi();
     }
 
     private void duplicatePreset(int index) {
@@ -645,7 +618,7 @@ public final class FontModuleConfigScreen extends KineticScreen {
         selectedPreset = index + 1;
         clampPresetScrollToSelection();
         closeContextMenu();
-        rebuildScreen();
+        rebuildUi();
     }
 
     private void resetPreset(int index) {
@@ -655,7 +628,7 @@ public final class FontModuleConfigScreen extends KineticScreen {
         draftEffects.set(index, new AuthorConfig.EffectSettings());
         selectedPreset = index;
         closeContextMenu();
-        rebuildScreen();
+        rebuildUi();
     }
 
     private void deletePreset(int index) {
@@ -666,7 +639,7 @@ public final class FontModuleConfigScreen extends KineticScreen {
         selectedPreset = Mth.clamp(index, 0, draftEffects.size() - 1);
         clampPresetScroll();
         closeContextMenu();
-        rebuildScreen();
+        rebuildUi();
     }
 
     private void copyPreviewText() {
@@ -705,7 +678,7 @@ public final class FontModuleConfigScreen extends KineticScreen {
     @Override
     public void onClose() {
         if (minecraft != null) {
-            minecraft.setScreen(parent);
+            navigateBack();
         }
     }
 
@@ -716,7 +689,7 @@ public final class FontModuleConfigScreen extends KineticScreen {
 
     @Override
     protected void renderCanvasBackground(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        GuiTheme.shadow(graphics, canvasWidth, canvasHeight);
+        GuiTheme.shadow(graphics, canvasWidth(), canvasHeight());
         GuiTheme.panel(graphics, LIST_X, LIST_Y, LIST_W, LIST_H);
         GuiTheme.panel(graphics, PREVIEW_X, PREVIEW_Y, PREVIEW_W, PREVIEW_H);
         GuiTheme.panel(graphics, EDITOR_X, EDITOR_Y, EDITOR_W, EDITOR_H);
@@ -747,7 +720,6 @@ public final class FontModuleConfigScreen extends KineticScreen {
         }
 
         renderPreview(graphics, mouseX, mouseY);
-        renderContextMenu(graphics, mouseX, mouseY);
     }
 
     private void renderPresetList(GuiGraphics graphics, int mouseX, int mouseY) {
@@ -760,23 +732,33 @@ public final class FontModuleConfigScreen extends KineticScreen {
         double visualPresetScroll = presetScrollSmoothing.follow(presetScroll, maxScroll);
         int presetStart = Math.max(0, Math.min((int) Math.floor(visualPresetScroll), maxScroll));
         int presetShift = (int) Math.round((visualPresetScroll - presetStart) * LIST_ROW_H);
-        enableCanvasScissor(graphics, LIST_X + 5, contentY, LIST_X + LIST_W - 11, contentY + contentH);
+        enableCanvasScissor(graphics, LIST_X + 6, contentY + 1, LIST_X + LIST_W - 12, contentY + contentH - 1);
         for (int row = 0; row < visibleRows + 2; row++) {
             int index = presetStart + row;
             if (index >= draftEffects.size()) break;
             int y = contentY + row * LIST_ROW_H - presetShift;
             if (y + LIST_ROW_H <= contentY || y >= contentY + contentH) continue;
-            if (index == selectedPreset) {
+            boolean hovered = GuiTheme.hovering(mouseX, mouseY, LIST_X + 7, y, LIST_W - 20, LIST_ROW_H - 2);
+            boolean selected = index == selectedPreset;
+            if (selected) {
                 graphics.fill(LIST_X + 7, y, LIST_X + LIST_W - 13, y + LIST_ROW_H - 2, 0x66555555);
-                graphics.renderOutline(LIST_X + 7, y, LIST_W - 20, LIST_ROW_H - 2, PRESET_SELECTED_OUTLINE);
-            } else if (GuiTheme.hovering(mouseX, mouseY, LIST_X + 7, y, LIST_W - 20, LIST_ROW_H - 2)) {
+            } else if (hovered) {
                 graphics.fill(LIST_X + 7, y, LIST_X + LIST_W - 13, y + LIST_ROW_H - 2, 0x33444444);
-                graphics.renderOutline(LIST_X + 7, y, LIST_W - 20, LIST_ROW_H - 2, PRESET_HOVER_OUTLINE);
             }
+            GuiTheme.stateOutline(
+                    graphics,
+                    LIST_X + 7,
+                    y,
+                    LIST_W - 20,
+                    LIST_ROW_H - 2,
+                    selected,
+                    hovered,
+                    false
+            );
             graphics.drawString(font, Component.translatable("gui.textstudio.font.editor.preset", index + 1), LIST_X + 11, y + 5, 0xFFFFFF, false);
             renderPresetSwatches(graphics, draftEffects.get(index), y + 5);
         }
-        graphics.disableScissor();
+        disableCanvasScissor(graphics);
 
         if (maxScroll > 0) {
             int thumbHeight = Scroll.calculateThumbHeight(contentH, visibleRows, draftEffects.size(), 18);
@@ -816,10 +798,10 @@ public final class FontModuleConfigScreen extends KineticScreen {
 
         enableCanvasScissor(
                 graphics,
-                PREVIEW_CONTENT_X,
-                PREVIEW_CONTENT_Y,
-                PREVIEW_CONTENT_X + PREVIEW_CONTENT_W,
-                PREVIEW_CONTENT_Y + PREVIEW_CONTENT_H
+                PREVIEW_CONTENT_X + 1,
+                PREVIEW_CONTENT_Y + 1,
+                PREVIEW_CONTENT_X + PREVIEW_CONTENT_W - 1,
+                PREVIEW_CONTENT_Y + PREVIEW_CONTENT_H - 1
         );
         graphics.pose().pushPose();
         graphics.pose().translate(PREVIEW_CONTENT_X + 2, PREVIEW_CONTENT_Y + 3, 0.0f);
@@ -834,7 +816,7 @@ public final class FontModuleConfigScreen extends KineticScreen {
             graphics.drawString(font, lines.get(i), 0, lineY, 0xFFFFFFFF, true);
         }
         graphics.pose().popPose();
-        graphics.disableScissor();
+        disableCanvasScissor(graphics);
 
         if (maxScroll > 0) {
             int thumbHeight = Scroll.calculateThumbHeight(
@@ -926,51 +908,27 @@ public final class FontModuleConfigScreen extends KineticScreen {
         }
     }
 
-    private void renderContextMenu(GuiGraphics graphics, int mouseX, int mouseY) {
-        if (contextEntries.isEmpty()) {
-            return;
-        }
-        int height = contextEntries.size() * CONTEXT_ROW_H + 4;
-        graphics.pose().pushPose();
-        graphics.pose().translate(0.0f, 0.0f, 420.0f);
-        graphics.fill(contextX, contextY, contextX + CONTEXT_W, contextY + height, 0xF0181818);
-        graphics.renderOutline(contextX, contextY, CONTEXT_W, height, 0xFFFFB300);
-        for (int i = 0; i < contextEntries.size(); i++) {
-            ContextEntry entry = contextEntries.get(i);
-            int y = contextY + 2 + i * CONTEXT_ROW_H;
-            boolean hovered = GuiTheme.hovering(mouseX, mouseY, contextX + 2, y, CONTEXT_W - 4, CONTEXT_ROW_H);
-            if (hovered && entry.active()) {
-                graphics.fill(contextX + 2, y, contextX + CONTEXT_W - 2, y + CONTEXT_ROW_H, 0x55555555);
-            }
-            graphics.drawString(font, entry.label(), contextX + 7, y + 5, entry.active() ? 0xFFFFFF : 0xFF999999, false);
-        }
-        graphics.pose().popPose();
-    }
 
     @Override
     protected void renderTooltips(GuiGraphics graphics, int scaledMouseX, int scaledMouseY, int mouseX, int mouseY) {
-        if (!contextEntries.isEmpty()) {
-            return;
-        }
-
         if (categoryMenuOpen) {
             Component categoryTip = findCategoryTooltip(scaledMouseX, scaledMouseY);
             if (categoryTip != null) {
-                GuiOverlay.requestTooltip(categoryTip, mouseX, mouseY);
+                showTooltip(categoryTip);
             }
             return;
         }
 
         Component dynamic = findDynamicTooltip(scaledMouseX, scaledMouseY);
         if (dynamic != null) {
-            GuiOverlay.requestTooltip(dynamic, mouseX, mouseY);
+            showTooltip(dynamic);
             return;
         }
 
         for (int i = hoverTips.size() - 1; i >= 0; i--) {
             HoverTip tip = hoverTips.get(i);
             if (GuiTheme.hovering(scaledMouseX, scaledMouseY, tip.x(), tip.y(), tip.w(), tip.h())) {
-                GuiOverlay.requestTooltip(tip.text(), mouseX, mouseY);
+                showTooltip(tip.text());
                 return;
             }
         }
@@ -1017,22 +975,12 @@ public final class FontModuleConfigScreen extends KineticScreen {
 
     @Override
     protected boolean canvasMouseClicked(double mouseX, double mouseY, int button) {
-        if (!contextEntries.isEmpty()) {
-            if (handleContextMenuClick(mouseX, mouseY, button)) {
-                return true;
-            }
-            closeContextMenu();
-            if (button == 0) {
-                return true;
-            }
-        }
-
         if (categoryMenuOpen) {
             boolean inSelector = GuiTheme.hovering(mouseX, mouseY, CATEGORY_X, CATEGORY_Y, CATEGORY_W, CATEGORY_H);
             boolean inMenu = GuiTheme.hovering(mouseX, mouseY, CATEGORY_X, CATEGORY_MENU_Y, CATEGORY_W, CATEGORY_MENU_H);
             if (!inSelector && !inMenu) {
                 categoryMenuOpen = false;
-                rebuildScreen();
+                rebuildUi();
                 return true;
             }
         }
@@ -1042,7 +990,7 @@ public final class FontModuleConfigScreen extends KineticScreen {
             if (presetIndex >= 0) {
                 if (presetIndex != selectedPreset) {
                     selectedPreset = presetIndex;
-                    rebuildScreen();
+                    rebuildUi();
                 }
                 openPresetContextMenu(presetIndex, mouseX, mouseY);
                 return true;
@@ -1098,7 +1046,7 @@ public final class FontModuleConfigScreen extends KineticScreen {
             int presetIndex = presetIndexAt(mouseX, mouseY);
             if (presetIndex >= 0) {
                 selectedPreset = presetIndex;
-                rebuildScreen();
+                rebuildUi();
                 return true;
             }
 
@@ -1158,9 +1106,6 @@ public final class FontModuleConfigScreen extends KineticScreen {
 
     @Override
     protected boolean canvasMouseScrolled(double mouseX, double mouseY, double delta) {
-        if (!contextEntries.isEmpty()) {
-            return true;
-        }
         if (GuiTheme.hovering(mouseX, mouseY, PREVIEW_X, PREVIEW_Y + 43, PREVIEW_W, PREVIEW_H - 43)) {
             previewScroll = previewScrollSmoothing.wheel(previewScroll, delta, 1.0D / 3.0D, previewMaxScroll());
             return true;
@@ -1199,65 +1144,32 @@ public final class FontModuleConfigScreen extends KineticScreen {
     }
 
     private void openPresetContextMenu(int index, double mouseX, double mouseY) {
-        List<ContextEntry> entries = new ArrayList<>();
-        entries.add(new ContextEntry(
+        List<GuiOverlay.MenuItem> items = new ArrayList<>();
+        items.add(GuiOverlay.MenuItem.action(
                 Component.translatable("gui.textstudio.font.editor.context.copy_prefix"),
-                this::copyEffectPrefix,
-                true
+                this::copyEffectPrefix
         ));
-        entries.add(new ContextEntry(
-                Component.translatable("gui.textstudio.font.editor.context.duplicate"),
-                () -> duplicatePreset(index),
-                draftEffects.size() < MAX_PRESETS
-        ));
-        entries.add(new ContextEntry(
+        items.add(draftEffects.size() < MAX_PRESETS
+                ? GuiOverlay.MenuItem.action(
+                        Component.translatable("gui.textstudio.font.editor.context.duplicate"),
+                        () -> duplicatePreset(index)
+                )
+                : GuiOverlay.MenuItem.disabled(
+                        Component.translatable("gui.textstudio.font.editor.context.duplicate")
+                ));
+        items.add(GuiOverlay.MenuItem.action(
                 Component.translatable("gui.textstudio.font.editor.context.reset"),
-                () -> resetPreset(index),
-                true
+                () -> resetPreset(index)
         ));
-        entries.add(new ContextEntry(
-                Component.translatable("gui.textstudio.font.editor.context.delete"),
-                () -> deletePreset(index),
-                draftEffects.size() > 1
-        ));
-        openContextMenu(entries, mouseX, mouseY);
-    }
-
-    private void openContextMenu(List<ContextEntry> entries, double mouseX, double mouseY) {
-        contextEntries = List.copyOf(entries);
-        int height = contextEntries.size() * CONTEXT_ROW_H + 4;
-        int x = (int) mouseX + 6;
-        int y = (int) mouseY + 6;
-        if (x + CONTEXT_W > CANVAS_W - 4) {
-            x = (int) mouseX - CONTEXT_W - 6;
-        }
-        if (y + height > CANVAS_H - 4) {
-            y = (int) mouseY - height - 6;
-        }
-        contextX = Mth.clamp(x, 4, CANVAS_W - CONTEXT_W - 4);
-        contextY = Mth.clamp(y, 4, CANVAS_H - height - 4);
-    }
-
-    private boolean handleContextMenuClick(double mouseX, double mouseY, int button) {
-        if (button != 0 || contextEntries.isEmpty()) {
-            return false;
-        }
-        int height = contextEntries.size() * CONTEXT_ROW_H + 4;
-        if (!GuiTheme.hovering(mouseX, mouseY, contextX, contextY, CONTEXT_W, height)) {
-            return false;
-        }
-        int row = (int) ((mouseY - contextY - 2) / CONTEXT_ROW_H);
-        if (row >= 0 && row < contextEntries.size()) {
-            ContextEntry entry = contextEntries.get(row);
-            if (entry.active()) {
-                entry.action().run();
-            }
-        }
-        return true;
-    }
-
-    private void closeContextMenu() {
-        contextEntries = List.of();
+        items.add(draftEffects.size() > 1
+                ? GuiOverlay.MenuItem.danger(
+                        Component.translatable("gui.textstudio.font.editor.context.delete"),
+                        () -> deletePreset(index)
+                )
+                : GuiOverlay.MenuItem.disabled(
+                        Component.translatable("gui.textstudio.font.editor.context.delete")
+                ));
+        openContextMenu(mouseX, mouseY, items);
     }
 
     private int maxPresetScroll() {

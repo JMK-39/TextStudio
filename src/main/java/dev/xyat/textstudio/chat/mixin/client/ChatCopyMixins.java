@@ -1,11 +1,11 @@
 package dev.xyat.textstudio.chat.mixin.client;
 
 import dev.xyat.textstudio.chat.client.ChatCopyCanvasScreen;
+import dev.xyat.kineticcore.api.client.widget.KineticWidgets;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -29,18 +29,18 @@ public abstract class ChatCopyMixins extends Screen {
 
     @Inject(method = "init", at = @At("RETURN"))
     private void textstudio_chat$addCanvasButton(CallbackInfo ci) {
-        this.textstudio_chat$canvasButton = Button.builder(
-                        Component.translatable("gui.textstudio.chat.open_canvas"),
-                        b -> {
-                            Minecraft mc = Minecraft.getInstance();
-                            // 这里更新为独立的 Accessor
-                            ChatComponentAccessor accessor = (ChatComponentAccessor) mc.gui.getChat();
-                            mc.setScreen(new ChatCopyCanvasScreen((Screen) (Object) this, accessor.getTrimmedMessages()));
-                        }
-                )
-                .bounds(5, this.height - 30, 55, 12)
-                .tooltip(Tooltip.create(Component.translatable("gui.textstudio.chat.open_canvas.desc")))
-                .build();
+        this.textstudio_chat$canvasButton = KineticWidgets.createCompactButton(
+                5,
+                this.height - 30,
+                55,
+                Component.translatable("gui.textstudio.chat.open_canvas"),
+                Component.translatable("gui.textstudio.chat.open_canvas.desc"),
+                b -> {
+                    Minecraft mc = Minecraft.getInstance();
+                    ChatComponentAccessor accessor = (ChatComponentAccessor) mc.gui.getChat();
+                    mc.setScreen(new ChatCopyCanvasScreen((Screen) (Object) this, accessor.getTrimmedMessages()));
+                }
+        );
 
         if (this.input != null) {
             this.setInitialFocus(this.input);

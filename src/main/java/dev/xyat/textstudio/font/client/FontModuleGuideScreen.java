@@ -72,64 +72,36 @@ public final class FontModuleGuideScreen extends KineticScreen {
         super(Component.translatable("gui.textstudio.font.guide.title"));
         this.parent = parent;
         this.previewText = I18n.get("gui.textstudio.font.editor.preview.default");
-        useCanvas(CANVAS_W, CANVAS_H, 6);
-        maxScale = 1.0f;
-    }
+        useResponsiveCanvas(CANVAS_W, CANVAS_H, 6);
+}
 
     @Override
     protected void buildUi() {
         selectedPreset = Mth.clamp(selectedPreset, 0, Math.max(0, AuthorConfig.EFFECTS.size() - 1));
         scroll = Mth.clamp(scroll, 0, maxScroll());
 
-        addRenderableWidget(Button.builder(
-                Component.translatable("gui.textstudio.font.guide.back"),
-                button -> onClose()
-        ).bounds(INFO_X + INFO_W - 72, INFO_Y + 6, 64, 18).build());
+        addButton(INFO_X + INFO_W - 72, INFO_Y + 6, 64, Component.translatable("gui.textstudio.font.guide.back"), null, button -> onClose());
 
-        previewBox = new EditBox(
-                font,
-                INFO_X + 12,
-                INFO_Y + 52,
-                210,
-                18,
-                Component.translatable("gui.textstudio.font.editor.preview.input")
-        );
+        previewBox = addTextField(INFO_X + 12, INFO_Y + 52, 210, Component.translatable("gui.textstudio.font.editor.preview.input"));
         previewBox.setMaxLength(4096);
         previewBox.setValue(previewText);
         previewBox.setHint(Component.translatable("gui.textstudio.font.editor.preview.hint"));
-        previewBox.setTooltip(Tooltip.create(Component.translatable("gui.textstudio.font.editor.tip.preview_input")));
+        registerWidgetTooltip(previewBox, Component.translatable("gui.textstudio.font.editor.tip.preview_input"));
         previewBox.setResponder(value -> {
             previewText = value;
             previewScroll = 0;
             invalidatePreviewLines();
         });
-        addRenderableWidget(previewBox);
+addButton(INFO_X + 226, INFO_Y + 52, 56, Component.translatable("gui.textstudio.font.editor.copy"), Component.translatable("gui.textstudio.font.editor.tip.copy"), button -> copyCurrent());
 
-        addRenderableWidget(Button.builder(
-                Component.translatable("gui.textstudio.font.editor.copy"),
-                button -> copyCurrent()
-        ).bounds(INFO_X + 226, INFO_Y + 52, 56, 18)
-                .tooltip(Tooltip.create(Component.translatable("gui.textstudio.font.editor.tip.copy")))
-                .build());
+        addButton(INFO_X + 286, INFO_Y + 52, 44, Component.translatable("gui.textstudio.font.editor.copy_prefix"), Component.translatable("gui.textstudio.font.editor.tip.copy_prefix"), button -> copyPrefix());
 
-        addRenderableWidget(Button.builder(
-                Component.translatable("gui.textstudio.font.editor.copy_prefix"),
-                button -> copyPrefix()
-        ).bounds(INFO_X + 286, INFO_Y + 52, 44, 18)
-                .tooltip(Tooltip.create(Component.translatable("gui.textstudio.font.editor.tip.copy_prefix")))
-                .build());
-
-        addRenderableWidget(Button.builder(
-                Component.translatable("gui.textstudio.font.editor.copy_stop"),
-                button -> copyStop()
-        ).bounds(INFO_X + 334, INFO_Y + 52, 44, 18)
-                .tooltip(Tooltip.create(Component.translatable("gui.textstudio.font.editor.tip.copy_stop")))
-                .build());
+        addButton(INFO_X + 334, INFO_Y + 52, 44, Component.translatable("gui.textstudio.font.editor.copy_stop"), Component.translatable("gui.textstudio.font.editor.tip.copy_stop"), button -> copyStop());
     }
 
     @Override
     protected void renderCanvasBackground(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        GuiTheme.shadow(graphics, canvasWidth, canvasHeight);
+        GuiTheme.shadow(graphics, canvasWidth(), canvasHeight());
         GuiTheme.panel(graphics, LIST_X, LIST_Y, LIST_W, LIST_H);
         GuiTheme.panel(graphics, INFO_X, INFO_Y, INFO_W, INFO_H);
     }
@@ -176,6 +148,13 @@ public final class FontModuleGuideScreen extends KineticScreen {
         int start = Math.max(0, Math.min((int) Math.floor(visualScroll), maxScroll));
         int shift = (int) Math.round((visualScroll - start) * ROW_H);
         int count = Math.min(VISIBLE_ROWS + 2, Math.max(0, AuthorConfig.EFFECTS.size() - start));
+        enableCanvasScissor(
+                graphics,
+                LIST_X + 6,
+                y0 + 1,
+                LIST_X + LIST_W - 12,
+                y0 + listHeight - 1
+        );
         for (int row = 0; row < count; row++) {
             int index = start + row;
             int y = y0 + row * ROW_H - shift;
@@ -184,13 +163,13 @@ public final class FontModuleGuideScreen extends KineticScreen {
             int rowW = LIST_W - 18;
             int rowH = ROW_H - 1;
             boolean hovered = GuiTheme.hovering(mouseX, mouseY, rowX, y, rowW, rowH);
-            if (index == selectedPreset) {
+            boolean selected = index == selectedPreset;
+            if (selected) {
                 graphics.fill(rowX, y, rowX + rowW, y + rowH, 0x66555555);
-                graphics.renderOutline(rowX, y, rowW, rowH, PRESET_SELECTED_OUTLINE);
             } else if (hovered) {
                 graphics.fill(rowX, y, rowX + rowW, y + rowH, 0x33444444);
-                graphics.renderOutline(rowX, y, rowW, rowH, PRESET_HOVER_OUTLINE);
             }
+            GuiTheme.stateOutline(graphics, rowX, y, rowW, rowH, selected, hovered, false);
             graphics.drawString(
                     font,
                     Component.literal((index + 1) + ". ").append(presetName(index)),
@@ -200,6 +179,7 @@ public final class FontModuleGuideScreen extends KineticScreen {
                     false
             );
         }
+        disableCanvasScissor(graphics);
 
         if (maxScroll > 0) {
             int thumbHeight = Scroll.calculateThumbHeight(
@@ -232,10 +212,10 @@ public final class FontModuleGuideScreen extends KineticScreen {
 
         enableCanvasScissor(
                 graphics,
-                PREVIEW_CONTENT_X,
-                PREVIEW_CONTENT_Y,
-                PREVIEW_CONTENT_X + PREVIEW_CONTENT_W,
-                PREVIEW_CONTENT_Y + PREVIEW_CONTENT_H
+                PREVIEW_CONTENT_X + 1,
+                PREVIEW_CONTENT_Y + 1,
+                PREVIEW_CONTENT_X + PREVIEW_CONTENT_W - 1,
+                PREVIEW_CONTENT_Y + PREVIEW_CONTENT_H - 1
         );
         graphics.pose().pushPose();
         graphics.pose().translate(PREVIEW_CONTENT_X + 4, PREVIEW_CONTENT_Y + 4, 0.0f);
@@ -250,7 +230,7 @@ public final class FontModuleGuideScreen extends KineticScreen {
             graphics.drawString(font, lines.get(i), 0, lineY, 0xFFFFFFFF, true);
         }
         graphics.pose().popPose();
-        graphics.disableScissor();
+        disableCanvasScissor(graphics);
 
         if (maxScroll > 0) {
             int thumbHeight = Scroll.calculateThumbHeight(
@@ -526,7 +506,7 @@ public final class FontModuleGuideScreen extends KineticScreen {
     @Override
     public void onClose() {
         if (minecraft != null) {
-            minecraft.setScreen(parent);
+            navigateBack();
         }
     }
 

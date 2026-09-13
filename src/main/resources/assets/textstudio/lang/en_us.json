@@ -466,5 +466,8 @@
   "gui.textstudio.font.editor.palette.flash.tip": "§fWhen enabled, colors jump directly to the next palette entry instead of blending smoothly.",
   "gui.textstudio.module.name": "Text Studio",
   "gui.textstudio.module.function": "Text and chat tools",
-  "gui.textstudio.module.tooltip": "Text effects, font tools, and chat presentation settings."
+  "gui.textstudio.module.tooltip": "Text effects, font tools, and chat presentation settings.",
+  "chat.textstudio.timestamp": "§a[%s§a] ",
+  "chat.textstudio.compact": " §6§l×%s",
+  "mod.textstudio.name": "§6TextStudio"
 }

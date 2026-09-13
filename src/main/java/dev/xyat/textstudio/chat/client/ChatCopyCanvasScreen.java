@@ -1,13 +1,13 @@
 package dev.xyat.textstudio.chat.client;
 
+import dev.xyat.kineticcore.api.client.overlay.GuiOverlay;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
 import dev.xyat.kineticcore.api.client.widget.KineticWidgets.Scroll;
+import dev.xyat.kineticcore.api.client.screen.KineticScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.GuiMessage;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
@@ -19,11 +19,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
-public class ChatCopyCanvasScreen extends Screen {
+public class ChatCopyCanvasScreen extends KineticScreen {
     private final Screen parent;
     private final List<CanvasLine> lines = new ArrayList<>();
-    private float guiScale;
-    private int vWidth, vHeight;
 
     private double scrollTarget = 0D;
     private final Scroll.State scrollState = new Scroll.State();
@@ -46,8 +44,6 @@ public class ChatCopyCanvasScreen extends Screen {
 
     private String toastText = "";
     private long toastEndTime = 0;
-    private boolean showCopyMenu = false;
-    private double menuX, menuY;
 
     private static final int FRAME_W = 360;
     private static final int SCROLLBAR_WIDTH = 4;
@@ -70,10 +66,11 @@ public class ChatCopyCanvasScreen extends Screen {
         for (GuiMessage.Line line : reversed) {
             this.lines.add(new CanvasLine(line));
         }
+        useStandardCanvas();
     }
 
     private int getMaxScroll() {
-        int cH = vHeight - 75 + BOTTOM_EXPAND;
+        int cH = canvasHeight() - 75 + BOTTOM_EXPAND;
         int totalH = lines.size() * LINE_H;
         int visibleInnerH = Math.max(0, cH - INNER_PADDING * 2);
         int visibleLines = visibleInnerH / LINE_H;
@@ -82,41 +79,30 @@ public class ChatCopyCanvasScreen extends Screen {
     }
 
     @Override
-    protected void init() {
-        float vTargetW = 640f;
-        float scaleX = (float) this.width / vTargetW;
-        float vTargetH = 360f;
-        float scaleY = (float) this.height / vTargetH;
-        this.guiScale = Math.max(1.0f, Math.min(scaleX, scaleY));
-        this.vWidth = (int) (this.width / guiScale);
-        this.vHeight = (int) (this.height / guiScale);
-
+    protected void buildUi() {
         if (this.firstInit) {
             this.scrollTarget = this.getMaxScroll();
             this.scrollState.snap(this.scrollTarget, this.getMaxScroll());
             this.firstInit = false;
         }
 
-        int cX = (vWidth - FRAME_W) / 2;
+        int cX = (canvasWidth() - FRAME_W) / 2;
         int cY = 25;
 
-        this.searchBox = new EditBox(this.font, (int)((cX + 2) * guiScale), (int)((cY - 18) * guiScale), (int)(120 * guiScale), (int)(12 * guiScale), Component.translatable("gui.textstudio.chat.search"));
+        this.searchBox = addTextField(
+                cX + 2, cY - 18, 120,
+                Component.translatable("gui.textstudio.chat.search")
+        );
         this.searchBox.setResponder(this::onSearchChanged);
-        this.addRenderableWidget(this.searchBox);
 
-        this.addRenderableWidget(Button.builder(Component.translatable("gui.textstudio.chat.previous"), b -> navigateMatch(-1))
-                .bounds((int)((cX + 125) * guiScale), (int)((cY - 18) * guiScale), (int)(15 * guiScale), (int)(12 * guiScale))
-                .build());
-        this.addRenderableWidget(Button.builder(Component.translatable("gui.textstudio.chat.next"), b -> navigateMatch(1))
-                .bounds((int)((cX + 142) * guiScale), (int)((cY - 18) * guiScale), (int)(15 * guiScale), (int)(12 * guiScale))
-                .build());
-
-        this.addRenderableWidget(Button.builder(
-                        Component.translatable("gui.textstudio.chat.chat.back"),
-                        b -> this.onClose())
-                .bounds((int)((cX + FRAME_W - 50) * guiScale), (int)((cY - 18) * guiScale), (int)(50 * guiScale), (int)(14 * guiScale))
-                .tooltip(Tooltip.create(Component.translatable("gui.textstudio.chat.chat.back.desc")))
-                .build());
+        addButton(cX + 125, cY - 18, 30, Component.translatable("gui.textstudio.chat.previous"), null, () -> navigateMatch(-1));
+        addButton(cX + 160, cY - 18, 30, Component.translatable("gui.textstudio.chat.next"), null, () -> navigateMatch(1));
+        addButton(
+                cX + FRAME_W - 70, cY - 18, 70,
+                Component.translatable("gui.textstudio.chat.chat.back"),
+                Component.translatable("gui.textstudio.chat.chat.back.desc"),
+                this::onClose
+        );
     }
 
     private void onSearchChanged(String query) {
@@ -149,7 +135,7 @@ public class ChatCopyCanvasScreen extends Screen {
     }
 
     private void scrollToMatch(SearchMatch match) {
-        int cH = vHeight - 75 + BOTTOM_EXPAND;
+        int cH = canvasHeight() - 75 + BOTTOM_EXPAND;
         int visibleInnerH = Math.max(0, cH - INNER_PADDING * 2);
         int visiblePixels = (visibleInnerH / LINE_H) * LINE_H;
         int targetY = (match.lineIdx * LINE_H);
@@ -161,16 +147,10 @@ public class ChatCopyCanvasScreen extends Screen {
     }
 
     @Override
-    public void render(@NotNull GuiGraphics g, int mx, int my, float pt) {
-        this.renderBackground(g);
-        g.fill(0, 0, this.width, this.height, 0xCC000000);
-
-        g.pose().pushPose();
-        g.pose().scale(guiScale, guiScale, 1.0f);
-
-        int cX = (vWidth - FRAME_W) / 2;
+    protected void renderCanvasBackground(@NotNull GuiGraphics g, int mx, int my, float pt) {
+        int cX = (canvasWidth() - FRAME_W) / 2;
         int cY = 25;
-        int cH = vHeight - 75 + BOTTOM_EXPAND;
+        int cH = canvasHeight() - 75 + BOTTOM_EXPAND;
         int gutter = SCROLLBAR_WIDTH + SCROLLBAR_MARGIN + 2;
         int innerY = cY + INNER_PADDING;
         int innerH = Math.max(0, cH - INNER_PADDING * 2);
@@ -181,40 +161,34 @@ public class ChatCopyCanvasScreen extends Screen {
 
         if (!lastSearchQuery.isEmpty()) {
             String countText = (matches.isEmpty() ? 0 : currentMatchIdx + 1) + "/" + matches.size();
-            g.drawString(this.font, countText, cX + 162, cY - 16, 0xFFAAAAAA, false);
+            g.drawString(this.font, countText, cX + 195, cY - 16, 0xFFAAAAAA, false);
         }
 
         g.fill(cX, cY, cX + FRAME_W, cY + cH, 0xEE000000);
         drawOutwardBorder(g, cX, cY, cH);
 
-        enableVirtualScissor(g, cX + INNER_PADDING, innerY, cX + FRAME_W - gutter - INNER_PADDING, innerY + visiblePixels);
+        enableCanvasScissor(g, cX + INNER_PADDING, innerY, cX + FRAME_W - gutter - INNER_PADDING, innerY + visiblePixels);
         for (int i = 0; i < lines.size(); i++) {
             int lineY = innerY + (i * LINE_H) - (int) Math.round(visualScroll);
-
             if (lineY + LINE_H <= innerY || lineY >= innerY + visiblePixels) continue;
 
             CanvasLine line = lines.get(i);
-
             for (SearchMatch m : matches) {
                 if (m.lineIdx == i) {
                     int xStart = cX + PADDING + line.getOffset(m.startCol);
                     int xEnd = cX + PADDING + line.getOffset(m.endCol);
                     boolean isCurrent = (matches.indexOf(m) == currentMatchIdx);
-
                     int boxColor = SEARCH_HIGHLIGHT;
                     if (isCurrent) {
                         boxColor = 0xAAFF8800;
                         long elapsed = now - flashStartTime;
-                        if (elapsed < 400 && (elapsed / 100) % 2 == 0) {
-                            boxColor = 0xFFFFFFFF;
-                        }
+                        if (elapsed < 400 && (elapsed / 100) % 2 == 0) boxColor = 0xFFFFFFFF;
                     }
                     g.fill(xStart, lineY - 1, xEnd, lineY + 9, boxColor);
                 }
             }
 
             renderLineSelection(g, i, cX + PADDING, lineY, line);
-
             g.drawString(this.font, line.visual, cX + PADDING, lineY, 0xFFFFFFFF, true);
 
             for (SearchMatch m : matches) {
@@ -229,44 +203,29 @@ public class ChatCopyCanvasScreen extends Screen {
                 }
             }
         }
-        g.disableScissor();
-
-        renderThickScrollbar(g, cX + FRAME_W - (SCROLLBAR_WIDTH + SCROLLBAR_MARGIN), innerY, visiblePixels, mx / guiScale, my / guiScale);
-
-        if (showCopyMenu) {
-            g.pose().pushPose();
-            g.pose().translate(0, 0, 1000f);
-            renderCopyMenu(g, cX, innerY, visiblePixels);
-            g.pose().popPose();
-        }
-
-        if (System.currentTimeMillis() < toastEndTime) {
-            g.drawCenteredString(this.font, toastText, vWidth / 2, cY + cH + 10, GOLDEN_COLOR);
-        }
-
-        g.pose().popPose();
-
-        super.render(g, mx, my, pt);
-
-        if (this.searchBox != null && !this.searchBox.isFocused() && this.searchBox.getValue().isEmpty()) {
-            g.drawString(this.font, Component.translatable("gui.textstudio.chat.search_hint"),
-                    this.searchBox.getX() + 4,
-                    this.searchBox.getY() + (this.searchBox.getHeight() - 8) / 2,
-                    0xFF888888, false);
-        }
-    }
-
-
-    private void enableVirtualScissor(GuiGraphics g, int x1, int y1, int x2, int y2) {
-        int left = Mth.clamp((int) Math.floor(Math.min(x1, x2) * this.guiScale), 0, this.width);
-        int top = Mth.clamp((int) Math.floor(Math.min(y1, y2) * this.guiScale), 0, this.height);
-        int right = Mth.clamp((int) Math.ceil(Math.max(x1, x2) * this.guiScale), 0, this.width);
-        int bottom = Mth.clamp((int) Math.ceil(Math.max(y1, y2) * this.guiScale), 0, this.height);
-        g.enableScissor(left, top, right, bottom);
+        disableCanvasScissor(g);
+        renderThickScrollbar(g, cX + FRAME_W - (SCROLLBAR_WIDTH + SCROLLBAR_MARGIN), innerY, visiblePixels, mx, my);
     }
 
     @Override
-    public boolean mouseClicked(double mx, double my, int btn) {
+    protected void renderCanvasForeground(@NotNull GuiGraphics g, int mx, int my, float pt) {
+        int cX = (canvasWidth() - FRAME_W) / 2;
+        int cY = 25;
+        int cH = canvasHeight() - 75 + BOTTOM_EXPAND;
+        int innerY = cY + INNER_PADDING;
+        int innerH = Math.max(0, cH - INNER_PADDING * 2);
+        int visiblePixels = (innerH / LINE_H) * LINE_H;
+
+        renderTextFieldPlaceholder(g, searchBox, Component.translatable("gui.textstudio.chat.search_hint"));
+        if (System.currentTimeMillis() < toastEndTime) {
+            g.drawCenteredString(this.font, toastText, canvasWidth() / 2, cY + cH + 10, GOLDEN_COLOR);
+        }
+    }
+
+
+
+    @Override
+    protected boolean canvasMouseClicked(double mx, double my, int btn) {
 
         if (this.searchBox != null && !this.searchBox.isMouseOver(mx, my)) {
             if (this.getFocused() == this.searchBox) {
@@ -275,29 +234,27 @@ public class ChatCopyCanvasScreen extends Screen {
             this.searchBox.setFocused(false);
         }
 
-        if (super.mouseClicked(mx, my, btn)) return true;
+        if (super.canvasMouseClicked(mx, my, btn)) return true;
 
-        double vMx = mx / guiScale, vMy = my / guiScale;
-        int cX = (vWidth - FRAME_W) / 2;
-        int cY = 25, cH = vHeight - 75 + BOTTOM_EXPAND;
+        double vMx = mx, vMy = my;
+        int cX = (canvasWidth() - FRAME_W) / 2;
+        int cY = 25, cH = canvasHeight() - 75 + BOTTOM_EXPAND;
         int gutter = SCROLLBAR_WIDTH + SCROLLBAR_MARGIN + 2;
         int innerY = cY + INNER_PADDING;
         int innerH = Math.max(0, cH - INNER_PADDING * 2);
         int visiblePixels = (innerH / LINE_H) * LINE_H;
 
-        if (btn == 0 && showCopyMenu) {
-            int mw = 55, mh = 14;
-            int dx = (int) Mth.clamp(menuX, cX + INNER_PADDING, cX + FRAME_W - INNER_PADDING - mw);
-            int dy = (int) Mth.clamp(menuY, innerY, innerY + visiblePixels - mh);
-            if (vMx >= dx && vMx <= dx + mw && vMy >= dy && vMy <= dy + mh) {
-                doCopy(); return true;
-            }
-        }
-
         if (btn == 1 && hasSelection()) {
-            showCopyMenu = true; menuX = vMx; menuY = vMy; return true;
+            openContextMenu(
+                    vMx,
+                    vMy,
+                    List.of(GuiOverlay.MenuItem.action(
+                            Component.translatable("gui.textstudio.chat.copy"),
+                            this::doCopy
+                    ))
+            );
+            return true;
         }
-        showCopyMenu = false;
 
         if (btn == 0 && vMx >= cX + FRAME_W - gutter && vMx <= cX + FRAME_W && vMy >= innerY && vMy <= innerY + visiblePixels) {
             isDraggingScrollbar = true;
@@ -382,16 +339,6 @@ public class ChatCopyCanvasScreen extends Screen {
         );
     }
 
-    private void renderCopyMenu(GuiGraphics g, int cX, int cY, int cH) {
-        int mw = 55, mh = 14;
-        int dx = (int) Mth.clamp(menuX, cX, cX + FRAME_W - mw);
-        int dy = (int) Mth.clamp(menuY, cY, cY + cH - mh);
-
-        g.fill(dx, dy, dx + mw, dy + mh, 0xFF222222);
-        g.renderOutline(dx, dy, mw, mh, 0xFFFFFFFF);
-        g.drawCenteredString(this.font, Component.translatable("gui.textstudio.chat.copy"), dx + mw / 2, dy + 3, GOLDEN_COLOR);
-    }
-
     private void renderLineSelection(GuiGraphics g, int idx, int x, int y, CanvasLine line) {
         if (startLine == -1 || endLine == -1) return;
         int l1 = startLine, c1 = startCol, l2 = endLine, c2 = endCol;
@@ -448,8 +395,8 @@ public class ChatCopyCanvasScreen extends Screen {
     }
 
     @Override
-    public boolean mouseDragged(double mx, double my, int btn, double dx, double dy) {
-        double vMx = mx / guiScale, vMy = my / guiScale;
+    protected boolean canvasMouseDragged(double mx, double my, int btn, double dx, double dy) {
+        double vMx = mx, vMy = my;
         if (isDraggingScrollbar) {
             updateScrollFromMouse(vMy);
             return true;
@@ -462,23 +409,23 @@ public class ChatCopyCanvasScreen extends Screen {
             }
             return true;
         }
-        return super.mouseDragged(mx, my, btn, dx, dy);
+        return super.canvasMouseDragged(mx, my, btn, dx, dy);
     }
 
     @Override
-    public boolean mouseReleased(double mx, double my, int btn) {
+    protected boolean canvasMouseReleased(double mx, double my, int btn) {
         isDraggingText = isDraggingScrollbar = false;
-        return super.mouseReleased(mx, my, btn);
+        return super.canvasMouseReleased(mx, my, btn);
     }
 
     @Override
-    public boolean mouseScrolled(double mx, double my, double delta) {
+    protected boolean canvasMouseScrolled(double mx, double my, double delta) {
         scrollTarget = scrollState.wheel(scrollTarget, delta, LINE_H / 3.0D, getMaxScroll());
         return true;
     }
 
     private void updateScrollFromMouse(double vMy) {
-        int cY = 25, cH = vHeight - 75 + BOTTOM_EXPAND;
+        int cY = 25, cH = canvasHeight() - 75 + BOTTOM_EXPAND;
         int innerY = cY + INNER_PADDING;
         int innerH = Math.max(0, cH - INNER_PADDING * 2);
         int visiblePixels = (innerH / LINE_H) * LINE_H;
@@ -489,8 +436,8 @@ public class ChatCopyCanvasScreen extends Screen {
     }
 
     private int getLineIndexAt(double vMx, double vMy) {
-        int cX = (vWidth - FRAME_W) / 2;
-        int cY = 25, cH = vHeight - 75 + BOTTOM_EXPAND;
+        int cX = (canvasWidth() - FRAME_W) / 2;
+        int cY = 25, cH = canvasHeight() - 75 + BOTTOM_EXPAND;
         int gutter = SCROLLBAR_WIDTH + SCROLLBAR_MARGIN + 2;
         if (vMx < cX || vMx > cX + FRAME_W - gutter || vMy < cY || vMy > cY + cH) return -1;
         double relativeY = vMy - (cY + 2) + visualScroll();
@@ -500,7 +447,7 @@ public class ChatCopyCanvasScreen extends Screen {
 
     private int getColAt(int idx, double vMx) {
         CanvasLine line = lines.get(idx);
-        double lx = vMx - ((vWidth - FRAME_W) / 2.0 + PADDING);
+        double lx = vMx - ((canvasWidth() - FRAME_W) / 2.0 + PADDING);
         if (lx <= 0) return 0;
         int bestCol = 0;
         double minDiff = Double.MAX_VALUE;
@@ -517,7 +464,7 @@ public class ChatCopyCanvasScreen extends Screen {
 
     @Override
     public void onClose() {
-        Minecraft.getInstance().setScreen(parent);
+        navigateBack();
     }
 
     private void doCopy() {
@@ -534,7 +481,6 @@ public class ChatCopyCanvasScreen extends Screen {
         Minecraft.getInstance().keyboardHandler.setClipboard(sb.toString());
         this.toastText = Component.translatable("msg.textstudio.chat.copy_success").getString();
         this.toastEndTime = System.currentTimeMillis() + 2500;
-        showCopyMenu = false;
     }
 
     private boolean hasSelection() { return startLine != -1 && (startLine != endLine || startCol != endCol); }
