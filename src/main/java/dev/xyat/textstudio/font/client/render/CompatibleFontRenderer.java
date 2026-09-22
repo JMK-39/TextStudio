@@ -1,5 +1,7 @@
 package dev.xyat.textstudio.font.client.render;
 
+import javax.annotation.Nonnull;
+
 import dev.xyat.textstudio.font.api.IStyle;
 import dev.xyat.textstudio.font.client.effect.AnimationPerformance;
 import dev.xyat.textstudio.font.client.effect.EffectManager;
@@ -187,24 +189,24 @@ public final class CompatibleFontRenderer {
         return context.buffer.hasTextEffect;
     }
 
-    private static boolean sameEffect(IStyle.TextEffectStyleData first, IStyle.TextEffectStyleData second) {
+    private static boolean effectsDiffer(IStyle.TextEffectStyleData first, IStyle.TextEffectStyleData second) {
         if (first == second) {
-            return true;
-        }
-        if (first == null || second == null) {
             return false;
         }
-        if (first.customConfig != null || second.customConfig != null) {
-            return first.customConfig == second.customConfig;
+        if (first == null || second == null) {
+            return true;
         }
-        return first.pack() == second.pack();
+        if (first.customConfig != null || second.customConfig != null) {
+            return first.customConfig != second.customConfig;
+        }
+        return first.pack() != second.pack();
     }
 
     private static int countEffectRun(GlyphBuffer buffer, int start, IStyle.TextEffectStyleData data) {
         int end = start;
         while (end < buffer.size) {
             Style style = buffer.styles[end];
-            if (!(style instanceof IStyle effectStyle) || !sameEffect(data, effectStyle.textstudio_font$getStyleData())) {
+            if (!(style instanceof IStyle effectStyle) || effectsDiffer(data, effectStyle.textstudio_font$getStyleData())) {
                 break;
             }
             end++;
@@ -279,7 +281,7 @@ public final class CompatibleFontRenderer {
                     continue;
                 }
 
-                boolean newEffectRun = !sameEffect(previousData, data);
+                boolean newEffectRun = effectsDiffer(previousData, data);
                 if (newEffectRun) {
                     effectIndex = 0;
                     effectLength = countEffectRun(buffer, visualIndex, data);
@@ -785,7 +787,7 @@ public final class CompatibleFontRenderer {
         }
 
         @Override
-        public boolean accept(int index, Style style, int codePoint) {
+        public boolean accept(int index, @Nonnull Style style, int codePoint) {
             buffer.add(style, codePoint);
             return true;
         }
@@ -804,8 +806,8 @@ public final class CompatibleFontRenderer {
         }
 
         @Override
-        public boolean accept(int index, Style style, int codePoint) {
-            if (runCount == 0 || !sameStyle(runStyles[runCount - 1], style)) {
+        public boolean accept(int index, @Nonnull Style style, int codePoint) {
+            if (runCount == 0 || stylesDiffer(runStyles[runCount - 1], style)) {
                 ensureCapacity(runCount + 1);
                 runStyles[runCount] = style;
                 runStarts[runCount] = text.length();
@@ -827,8 +829,8 @@ public final class CompatibleFontRenderer {
             runStarts = Arrays.copyOf(runStarts, next);
         }
 
-        private static boolean sameStyle(Style first, Style second) {
-            return first == second || first != null && first.equals(second);
+        private static boolean stylesDiffer(Style first, Style second) {
+            return first != second && (first == null || !first.equals(second));
         }
     }
 
@@ -842,7 +844,7 @@ public final class CompatibleFontRenderer {
         }
 
         @Override
-        public boolean accept(int index, Style style, int codePoint) {
+        public boolean accept(int index, @Nonnull Style style, int codePoint) {
             if (codePoint == '$' || codePoint == 0x2063) {
                 markerSeen = true;
             }
@@ -861,7 +863,7 @@ public final class CompatibleFontRenderer {
         }
 
         @Override
-        public boolean accept(FormattedCharSink sink) {
+        public boolean accept(@Nonnull FormattedCharSink sink) {
             for (int i = 0; i < buffer.size; i++) {
                 Style style = buffer.styles[i];
                 if (style instanceof IStyle effectStyle) {
@@ -891,7 +893,7 @@ public final class CompatibleFontRenderer {
         }
 
         @Override
-        public boolean accept(FormattedCharSink sink) {
+        public boolean accept(@Nonnull FormattedCharSink sink) {
             return sink.accept(0, style, codePoint);
         }
     }
@@ -908,7 +910,7 @@ public final class CompatibleFontRenderer {
         }
 
         @Override
-        public boolean accept(FormattedCharSink sink) {
+        public boolean accept(@Nonnull FormattedCharSink sink) {
             for (int i = start; i < end; i++) {
                 if (!sink.accept(i - start, buffer.styles[i], buffer.codePoints[i])) {
                     return false;

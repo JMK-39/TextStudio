@@ -1,19 +1,18 @@
 package dev.xyat.textstudio.font.client;
 
+import dev.xyat.kineticcore.api.client.input.KineticMouseButtons;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
-import dev.xyat.kineticcore.api.client.overlay.GuiOverlay;
+import dev.xyat.kineticcore.api.client.overlay.KineticOverlays;
 import dev.xyat.kineticcore.api.client.screen.KineticScreen;
-import dev.xyat.kineticcore.api.client.widget.KineticWidgets.Scroll;
+import dev.xyat.kineticcore.api.client.widget.scroll.KineticScroll;
+import dev.xyat.kineticcore.api.client.text.KineticText;
+import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import dev.xyat.textstudio.font.api.IStyle;
 import dev.xyat.textstudio.font.client.parser.CompactTagCodec;
 import dev.xyat.textstudio.font.config.AuthorConfig;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.components.Tooltip;
+import dev.xyat.kineticcore.api.client.widget.input.KineticTextFields.KineticEditBox;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
@@ -52,13 +51,13 @@ public final class FontModuleGuideScreen extends KineticScreen {
     private final Screen parent;
     private int selectedPreset;
     private double scroll;
-    private final Scroll.State listScrollSmoothing = new Scroll.State();
+    private final KineticScroll.State listScrollSmoothing = new KineticScroll.State();
     private boolean listScrollbarDragging;
     private double previewScroll;
-    private final Scroll.State previewScrollSmoothing = new Scroll.State();
+    private final KineticScroll.State previewScrollSmoothing = new KineticScroll.State();
     private boolean previewScrollbarDragging;
     private String previewText;
-    private EditBox previewBox;
+    private KineticEditBox previewBox;
     private String previewLinesText;
     private int previewLinesPreset = -1;
     private AuthorConfig.EffectSettings previewLinesEffect;
@@ -70,9 +69,9 @@ public final class FontModuleGuideScreen extends KineticScreen {
 
     private FontModuleGuideScreen(Screen parent) {
         super(Component.translatable("gui.textstudio.font.guide.title"));
+        setParentScreen(parent);
         this.parent = parent;
-        this.previewText = I18n.get("gui.textstudio.font.editor.preview.default");
-        useResponsiveCanvas(CANVAS_W, CANVAS_H, 6);
+        this.previewText = KineticText.get("gui.textstudio.font.editor.preview.default");
 }
 
     @Override
@@ -80,23 +79,23 @@ public final class FontModuleGuideScreen extends KineticScreen {
         selectedPreset = Mth.clamp(selectedPreset, 0, Math.max(0, AuthorConfig.EFFECTS.size() - 1));
         scroll = Mth.clamp(scroll, 0, maxScroll());
 
-        addButton(INFO_X + INFO_W - 72, INFO_Y + 6, 64, Component.translatable("gui.textstudio.font.guide.back"), null, button -> onClose());
+        addButton(INFO_X + INFO_W - 72, INFO_Y + 6, 64, Component.translatable("gui.textstudio.font.guide.back"), null, () -> onClose());
 
         previewBox = addTextField(INFO_X + 12, INFO_Y + 52, 210, Component.translatable("gui.textstudio.font.editor.preview.input"));
         previewBox.setMaxLength(4096);
         previewBox.setValue(previewText);
-        previewBox.setHint(Component.translatable("gui.textstudio.font.editor.preview.hint"));
+        previewBox.setPlaceholder(Component.translatable("gui.textstudio.font.editor.preview.hint"));
         registerWidgetTooltip(previewBox, Component.translatable("gui.textstudio.font.editor.tip.preview_input"));
         previewBox.setResponder(value -> {
             previewText = value;
             previewScroll = 0;
             invalidatePreviewLines();
         });
-addButton(INFO_X + 226, INFO_Y + 52, 56, Component.translatable("gui.textstudio.font.editor.copy"), Component.translatable("gui.textstudio.font.editor.tip.copy"), button -> copyCurrent());
+addButton(INFO_X + 226, INFO_Y + 52, 56, Component.translatable("gui.textstudio.font.editor.copy"), Component.translatable("gui.textstudio.font.editor.tip.copy"), () -> copyCurrent());
 
-        addButton(INFO_X + 286, INFO_Y + 52, 44, Component.translatable("gui.textstudio.font.editor.copy_prefix"), Component.translatable("gui.textstudio.font.editor.tip.copy_prefix"), button -> copyPrefix());
+        addButton(INFO_X + 286, INFO_Y + 52, 44, Component.translatable("gui.textstudio.font.editor.copy_prefix"), Component.translatable("gui.textstudio.font.editor.tip.copy_prefix"), () -> copyPrefix());
 
-        addButton(INFO_X + 334, INFO_Y + 52, 44, Component.translatable("gui.textstudio.font.editor.copy_stop"), Component.translatable("gui.textstudio.font.editor.tip.copy_stop"), button -> copyStop());
+        addButton(INFO_X + 334, INFO_Y + 52, 44, Component.translatable("gui.textstudio.font.editor.copy_stop"), Component.translatable("gui.textstudio.font.editor.tip.copy_stop"), () -> copyStop());
     }
 
     @Override
@@ -134,7 +133,7 @@ addButton(INFO_X + 226, INFO_Y + 52, 56, Component.translatable("gui.textstudio.
 
     private Component presetName(int index) {
         String key = "gui.textstudio.font.preset." + (index + 1);
-        if (I18n.exists(key)) {
+        if (KineticText.hasTranslation(key)) {
             return Component.translatable(key);
         }
         return Component.translatable("gui.textstudio.font.editor.preset", index + 1);
@@ -144,11 +143,11 @@ addButton(INFO_X + 226, INFO_Y + 52, 56, Component.translatable("gui.textstudio.
         int y0 = LIST_Y + 28;
         int listHeight = VISIBLE_ROWS * ROW_H;
         int maxScroll = maxScroll();
-        double visualScroll = listScrollSmoothing.follow(scroll, maxScroll);
+        double visualScroll = listScrollSmoothing.follow(scroll, maxScroll, false);
         int start = Math.max(0, Math.min((int) Math.floor(visualScroll), maxScroll));
         int shift = (int) Math.round((visualScroll - start) * ROW_H);
         int count = Math.min(VISIBLE_ROWS + 2, Math.max(0, AuthorConfig.EFFECTS.size() - start));
-        enableCanvasScissor(
+        enableUiScissor(
                 graphics,
                 LIST_X + 6,
                 y0 + 1,
@@ -164,12 +163,17 @@ addButton(INFO_X + 226, INFO_Y + 52, 56, Component.translatable("gui.textstudio.
             int rowH = ROW_H - 1;
             boolean hovered = GuiTheme.hovering(mouseX, mouseY, rowX, y, rowW, rowH);
             boolean selected = index == selectedPreset;
-            if (selected) {
-                graphics.fill(rowX, y, rowX + rowW, y + rowH, 0x66555555);
-            } else if (hovered) {
-                graphics.fill(rowX, y, rowX + rowW, y + rowH, 0x33444444);
-            }
-            GuiTheme.stateOutline(graphics, rowX, y, rowW, rowH, selected, hovered, false);
+            GuiTheme.stateSurface(
+                    graphics,
+                    rowX,
+                    y,
+                    rowW,
+                    rowH,
+                    GuiTheme.Surface.PANEL_ALT,
+                    selected,
+                    hovered,
+                    false
+            );
             graphics.drawString(
                     font,
                     Component.literal((index + 1) + ". ").append(presetName(index)),
@@ -179,10 +183,10 @@ addButton(INFO_X + 226, INFO_Y + 52, 56, Component.translatable("gui.textstudio.
                     false
             );
         }
-        disableCanvasScissor(graphics);
+        disableUiScissor(graphics);
 
         if (maxScroll > 0) {
-            int thumbHeight = Scroll.calculateThumbHeight(
+            int thumbHeight = KineticScroll.stateThumbHeight(
                     listHeight,
                     VISIBLE_ROWS,
                     AuthorConfig.EFFECTS.size(),
@@ -210,7 +214,7 @@ addButton(INFO_X + 226, INFO_Y + 52, 56, Component.translatable("gui.textstudio.
         int maxScroll = Math.max(0, lines.size() - visibleLines);
         previewScroll = Mth.clamp(previewScroll, 0, maxScroll);
 
-        enableCanvasScissor(
+        enableUiScissor(
                 graphics,
                 PREVIEW_CONTENT_X + 1,
                 PREVIEW_CONTENT_Y + 1,
@@ -220,7 +224,7 @@ addButton(INFO_X + 226, INFO_Y + 52, 56, Component.translatable("gui.textstudio.
         graphics.pose().pushPose();
         graphics.pose().translate(PREVIEW_CONTENT_X + 4, PREVIEW_CONTENT_Y + 4, 0.0f);
         graphics.pose().scale(PREVIEW_SCALE, PREVIEW_SCALE, 1.0f);
-        double visualPreviewScroll = previewScrollSmoothing.follow(previewScroll, maxScroll);
+        double visualPreviewScroll = previewScrollSmoothing.follow(previewScroll, maxScroll, false);
         int previewStart = Math.max(0, Math.min((int) Math.floor(visualPreviewScroll), maxScroll));
         int previewShift = (int) Math.round((visualPreviewScroll - previewStart) * font.lineHeight);
         int end = Math.min(lines.size(), previewStart + visibleLines + 2);
@@ -230,10 +234,10 @@ addButton(INFO_X + 226, INFO_Y + 52, 56, Component.translatable("gui.textstudio.
             graphics.drawString(font, lines.get(i), 0, lineY, 0xFFFFFFFF, true);
         }
         graphics.pose().popPose();
-        disableCanvasScissor(graphics);
+        disableUiScissor(graphics);
 
         if (maxScroll > 0) {
-            int thumbHeight = Scroll.calculateThumbHeight(
+            int thumbHeight = KineticScroll.stateThumbHeight(
                     PREVIEW_CONTENT_H,
                     visibleLines,
                     lines.size(),
@@ -314,7 +318,7 @@ addButton(INFO_X + 226, INFO_Y + 52, 56, Component.translatable("gui.textstudio.
         if (AuthorConfig.EFFECTS.isEmpty()) {
             return;
         }
-        Minecraft.getInstance().keyboardHandler.setClipboard(
+        KineticClientRuntime.setClipboard(
                 CompactTagCodec.encodePreset(selectedPreset + 1, previewText)
         );
         showCopyToast();
@@ -324,19 +328,19 @@ addButton(INFO_X + 226, INFO_Y + 52, 56, Component.translatable("gui.textstudio.
         if (AuthorConfig.EFFECTS.isEmpty()) {
             return;
         }
-        Minecraft.getInstance().keyboardHandler.setClipboard(
+        KineticClientRuntime.setClipboard(
                 CompactTagCodec.encodePresetPrefix(selectedPreset + 1)
         );
         showCopyToast();
     }
 
     private void copyStop() {
-        Minecraft.getInstance().keyboardHandler.setClipboard(CompactTagCodec.encodeReset());
+        KineticClientRuntime.setClipboard(CompactTagCodec.encodeReset());
         showCopyToast();
     }
 
     private void showCopyToast() {
-        GuiOverlay.toast(
+        KineticOverlays.toast(
                 "textstudio_copy_success",
                 Component.translatable("msg.textstudio.font.copy.success")
         );
@@ -350,7 +354,7 @@ addButton(INFO_X + 226, INFO_Y + 52, 56, Component.translatable("gui.textstudio.
 
     @Override
     protected boolean canvasMouseClicked(double mouseX, double mouseY, int button) {
-        if (button == 0) {
+        if (KineticMouseButtons.isPrimary(button)) {
             int maxListScroll = maxScroll();
             int listY = LIST_Y + 28;
             int listHeight = VISIBLE_ROWS * ROW_H;
@@ -363,13 +367,13 @@ addButton(INFO_X + 226, INFO_Y + 52, 56, Component.translatable("gui.textstudio.
                     listHeight
             )) {
                 listScrollbarDragging = true;
-                int thumbHeight = Scroll.calculateThumbHeight(
+                int thumbHeight = KineticScroll.stateThumbHeight(
                         listHeight,
                         VISIBLE_ROWS,
                         AuthorConfig.EFFECTS.size(),
                         18
                 );
-                scroll = Scroll.calculateScrollOffset(
+                scroll = KineticScroll.stateOffsetFromPointer(
                         mouseY,
                         listY,
                         listHeight,
@@ -390,13 +394,13 @@ addButton(INFO_X + 226, INFO_Y + 52, 56, Component.translatable("gui.textstudio.
                     PREVIEW_CONTENT_H
             )) {
                 previewScrollbarDragging = true;
-                int thumbHeight = Scroll.calculateThumbHeight(
+                int thumbHeight = KineticScroll.stateThumbHeight(
                         PREVIEW_CONTENT_H,
                         previewVisibleLines(),
                         getPreviewLines().size(),
                         18
                 );
-                previewScroll = Scroll.calculateScrollOffset(
+                previewScroll = KineticScroll.stateOffsetFromPointer(
                         mouseY,
                         PREVIEW_CONTENT_Y,
                         PREVIEW_CONTENT_H,
@@ -420,7 +424,7 @@ addButton(INFO_X + 226, INFO_Y + 52, 56, Component.translatable("gui.textstudio.
 
     @Override
     protected boolean canvasMouseReleased(double mouseX, double mouseY, int button) {
-        if (button == 0 && (listScrollbarDragging || previewScrollbarDragging)) {
+        if (KineticMouseButtons.isPrimary(button) && (listScrollbarDragging || previewScrollbarDragging)) {
             listScrollbarDragging = false;
             previewScrollbarDragging = false;
             return true;
@@ -430,18 +434,18 @@ addButton(INFO_X + 226, INFO_Y + 52, 56, Component.translatable("gui.textstudio.
 
     @Override
     protected boolean canvasMouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
-        if (button == 0 && listScrollbarDragging) {
+        if (KineticMouseButtons.isPrimary(button) && listScrollbarDragging) {
             int maxListScroll = maxScroll();
             if (maxListScroll > 0) {
                 int listY = LIST_Y + 28;
                 int listHeight = VISIBLE_ROWS * ROW_H;
-                int thumbHeight = Scroll.calculateThumbHeight(
+                int thumbHeight = KineticScroll.stateThumbHeight(
                         listHeight,
                         VISIBLE_ROWS,
                         AuthorConfig.EFFECTS.size(),
                         18
                 );
-                scroll = Scroll.calculateScrollOffset(
+                scroll = KineticScroll.stateOffsetFromPointer(
                         mouseY,
                         listY,
                         listHeight,
@@ -452,16 +456,16 @@ addButton(INFO_X + 226, INFO_Y + 52, 56, Component.translatable("gui.textstudio.
             }
             return true;
         }
-        if (button == 0 && previewScrollbarDragging) {
+        if (KineticMouseButtons.isPrimary(button) && previewScrollbarDragging) {
             int maxPreviewScroll = previewMaxScroll();
             if (maxPreviewScroll > 0) {
-                int thumbHeight = Scroll.calculateThumbHeight(
+                int thumbHeight = KineticScroll.stateThumbHeight(
                         PREVIEW_CONTENT_H,
                         previewVisibleLines(),
                         getPreviewLines().size(),
                         18
                 );
-                previewScroll = Scroll.calculateScrollOffset(
+                previewScroll = KineticScroll.stateOffsetFromPointer(
                         mouseY,
                         PREVIEW_CONTENT_Y,
                         PREVIEW_CONTENT_H,
@@ -478,11 +482,11 @@ addButton(INFO_X + 226, INFO_Y + 52, 56, Component.translatable("gui.textstudio.
     @Override
     protected boolean canvasMouseScrolled(double mouseX, double mouseY, double delta) {
         if (GuiTheme.hovering(mouseX, mouseY, PREVIEW_CONTENT_X, PREVIEW_CONTENT_Y, PREVIEW_CONTENT_W, PREVIEW_CONTENT_H)) {
-            previewScroll = previewScrollSmoothing.wheel(previewScroll, delta, 1.0D / 3.0D, previewMaxScroll());
+            previewScroll = previewScrollSmoothing.wheel(previewScroll, delta, 1.0D, previewMaxScroll());
             return true;
         }
         if (GuiTheme.hovering(mouseX, mouseY, LIST_X, LIST_Y, LIST_W, LIST_H)) {
-            scroll = listScrollSmoothing.wheel(scroll, delta, 1.0D / 3.0D, maxScroll());
+            scroll = listScrollSmoothing.wheel(scroll, delta, 1.0D, maxScroll());
             return true;
         }
         return super.canvasMouseScrolled(mouseX, mouseY, delta);
@@ -494,20 +498,13 @@ addButton(INFO_X + 226, INFO_Y + 52, 56, Component.translatable("gui.textstudio.
         if (!GuiTheme.hovering(mouseX, mouseY, LIST_X + 6, y0, LIST_W - 18, h)) {
             return -1;
         }
-        double visualScroll = listScrollSmoothing.follow(scroll, maxScroll());
+        double visualScroll = listScrollSmoothing.follow(scroll, maxScroll(), false);
         int index = (int) Math.floor((mouseY - y0) / ROW_H + visualScroll);
         return index >= 0 && index < AuthorConfig.EFFECTS.size() ? index : -1;
     }
 
     private int maxScroll() {
         return Math.max(0, AuthorConfig.EFFECTS.size() - VISIBLE_ROWS);
-    }
-
-    @Override
-    public void onClose() {
-        if (minecraft != null) {
-            navigateBack();
-        }
     }
 
     @Override

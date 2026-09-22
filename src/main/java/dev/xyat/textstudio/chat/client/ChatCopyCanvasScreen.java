@@ -1,18 +1,19 @@
 package dev.xyat.textstudio.chat.client;
 
-import dev.xyat.kineticcore.api.client.overlay.GuiOverlay;
+import dev.xyat.kineticcore.api.client.input.KineticKeyBindings;
+import dev.xyat.kineticcore.api.client.input.KineticMouseButtons;
+import dev.xyat.kineticcore.api.client.overlay.KineticOverlays;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
-import dev.xyat.kineticcore.api.client.widget.KineticWidgets.Scroll;
+import dev.xyat.kineticcore.api.client.widget.scroll.KineticScroll;
 import dev.xyat.kineticcore.api.client.screen.KineticScreen;
-import net.minecraft.client.Minecraft;
+import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import net.minecraft.client.GuiMessage;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.EditBox;
+import dev.xyat.kineticcore.api.client.widget.input.KineticTextFields.KineticEditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import org.jetbrains.annotations.NotNull;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -24,7 +25,7 @@ public class ChatCopyCanvasScreen extends KineticScreen {
     private final List<CanvasLine> lines = new ArrayList<>();
 
     private double scrollTarget = 0D;
-    private final Scroll.State scrollState = new Scroll.State();
+    private final KineticScroll.State scrollState = new KineticScroll.State();
     private int startLine = -1, startCol = -1;
     private int endLine = -1, endCol = -1;
     private boolean isDraggingText = false;
@@ -36,7 +37,7 @@ public class ChatCopyCanvasScreen extends KineticScreen {
 
     private boolean firstInit = true;
 
-    private EditBox searchBox;
+    private KineticEditBox searchBox;
     private final List<SearchMatch> matches = new ArrayList<>();
     private int currentMatchIdx = -1;
     private String lastSearchQuery = "";
@@ -56,17 +57,16 @@ public class ChatCopyCanvasScreen extends KineticScreen {
 
     private static final int BOTTOM_EXPAND = 30;
     private static final int GOLDEN_COLOR = 0xFFFFD700;
-    private static final int SEARCH_HIGHLIGHT = 0x88FFFF00;
 
     public ChatCopyCanvasScreen(Screen parent, List<GuiMessage.Line> chatHistory) {
         super(Component.translatable("gui.textstudio.chat.canvas_title"));
+        setParentScreen(parent);
         this.parent = parent;
         List<GuiMessage.Line> reversed = new ArrayList<>(chatHistory);
         Collections.reverse(reversed);
         for (GuiMessage.Line line : reversed) {
             this.lines.add(new CanvasLine(line));
         }
-        useStandardCanvas();
     }
 
     private int getMaxScroll() {
@@ -93,6 +93,7 @@ public class ChatCopyCanvasScreen extends KineticScreen {
                 cX + 2, cY - 18, 120,
                 Component.translatable("gui.textstudio.chat.search")
         );
+        this.searchBox.setPlaceholder(Component.translatable("gui.textstudio.chat.search_hint"));
         this.searchBox.setResponder(this::onSearchChanged);
 
         addButton(cX + 125, cY - 18, 30, Component.translatable("gui.textstudio.chat.previous"), null, () -> navigateMatch(-1));
@@ -164,10 +165,10 @@ public class ChatCopyCanvasScreen extends KineticScreen {
             g.drawString(this.font, countText, cX + 195, cY - 16, 0xFFAAAAAA, false);
         }
 
-        g.fill(cX, cY, cX + FRAME_W, cY + cH, 0xEE000000);
+        GuiTheme.surface(g, cX, cY, FRAME_W, cH, GuiTheme.Surface.PANEL_ALT);
         drawOutwardBorder(g, cX, cY, cH);
 
-        enableCanvasScissor(g, cX + INNER_PADDING, innerY, cX + FRAME_W - gutter - INNER_PADDING, innerY + visiblePixels);
+        enableUiScissor(g, cX + INNER_PADDING, innerY, cX + FRAME_W - gutter - INNER_PADDING, innerY + visiblePixels);
         for (int i = 0; i < lines.size(); i++) {
             int lineY = innerY + (i * LINE_H) - (int) Math.round(visualScroll);
             if (lineY + LINE_H <= innerY || lineY >= innerY + visiblePixels) continue;
@@ -178,13 +179,16 @@ public class ChatCopyCanvasScreen extends KineticScreen {
                     int xStart = cX + PADDING + line.getOffset(m.startCol);
                     int xEnd = cX + PADDING + line.getOffset(m.endCol);
                     boolean isCurrent = (matches.indexOf(m) == currentMatchIdx);
-                    int boxColor = SEARCH_HIGHLIGHT;
+                    float highlightAlpha = isCurrent ? 0.67F : 0.53F;
+                    GuiTheme.Indicator highlight = isCurrent ? GuiTheme.Indicator.WARNING : GuiTheme.Indicator.INFO;
                     if (isCurrent) {
-                        boxColor = 0xAAFF8800;
                         long elapsed = now - flashStartTime;
-                        if (elapsed < 400 && (elapsed / 100) % 2 == 0) boxColor = 0xFFFFFFFF;
+                        if (elapsed < 400 && (elapsed / 100) % 2 == 0) {
+                            highlight = GuiTheme.Indicator.MUTED;
+                            highlightAlpha = 1.0F;
+                        }
                     }
-                    g.fill(xStart, lineY - 1, xEnd, lineY + 9, boxColor);
+                    GuiTheme.indicatorFill(g, xStart, lineY - 1, Math.max(1, xEnd - xStart), 10, highlight, highlightAlpha);
                 }
             }
 
@@ -203,7 +207,7 @@ public class ChatCopyCanvasScreen extends KineticScreen {
                 }
             }
         }
-        disableCanvasScissor(g);
+        disableUiScissor(g);
         renderThickScrollbar(g, cX + FRAME_W - (SCROLLBAR_WIDTH + SCROLLBAR_MARGIN), innerY, visiblePixels, mx, my);
     }
 
@@ -216,7 +220,6 @@ public class ChatCopyCanvasScreen extends KineticScreen {
         int innerH = Math.max(0, cH - INNER_PADDING * 2);
         int visiblePixels = (innerH / LINE_H) * LINE_H;
 
-        renderTextFieldPlaceholder(g, searchBox, Component.translatable("gui.textstudio.chat.search_hint"));
         if (System.currentTimeMillis() < toastEndTime) {
             g.drawCenteredString(this.font, toastText, canvasWidth() / 2, cY + cH + 10, GOLDEN_COLOR);
         }
@@ -228,10 +231,7 @@ public class ChatCopyCanvasScreen extends KineticScreen {
     protected boolean canvasMouseClicked(double mx, double my, int btn) {
 
         if (this.searchBox != null && !this.searchBox.isMouseOver(mx, my)) {
-            if (this.getFocused() == this.searchBox) {
-                this.setFocused(null);
-            }
-            this.searchBox.setFocused(false);
+            blurControl(this.searchBox);
         }
 
         if (super.canvasMouseClicked(mx, my, btn)) return true;
@@ -244,11 +244,11 @@ public class ChatCopyCanvasScreen extends KineticScreen {
         int innerH = Math.max(0, cH - INNER_PADDING * 2);
         int visiblePixels = (innerH / LINE_H) * LINE_H;
 
-        if (btn == 1 && hasSelection()) {
+        if (KineticMouseButtons.isSecondary(btn) && hasSelection()) {
             openContextMenu(
                     vMx,
                     vMy,
-                    List.of(GuiOverlay.MenuItem.action(
+                    List.of(KineticOverlays.MenuItem.action(
                             Component.translatable("gui.textstudio.chat.copy"),
                             this::doCopy
                     ))
@@ -256,7 +256,7 @@ public class ChatCopyCanvasScreen extends KineticScreen {
             return true;
         }
 
-        if (btn == 0 && vMx >= cX + FRAME_W - gutter && vMx <= cX + FRAME_W && vMy >= innerY && vMy <= innerY + visiblePixels) {
+        if (KineticMouseButtons.isPrimary(btn) && vMx >= cX + FRAME_W - gutter && vMx <= cX + FRAME_W && vMy >= innerY && vMy <= innerY + visiblePixels) {
             isDraggingScrollbar = true;
             updateScrollFromMouse(vMy);
             return true;
@@ -267,7 +267,7 @@ public class ChatCopyCanvasScreen extends KineticScreen {
             int col = getColAt(idx, vMx);
             long currentTime = System.currentTimeMillis();
 
-            if (btn == 0 && (currentTime - lastClickTime < 300) && lastClickLine == idx && Math.abs(lastClickCol - col) <= 3) {
+            if (KineticMouseButtons.isPrimary(btn) && (currentTime - lastClickTime < 300) && lastClickLine == idx && Math.abs(lastClickCol - col) <= 3) {
                 int[] bounds = getWordBoundaries(lines.get(idx).rawText, col);
                 startLine = endLine = idx;
                 startCol = bounds[0];
@@ -290,31 +290,29 @@ public class ChatCopyCanvasScreen extends KineticScreen {
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (this.searchBox.isFocused()) {
-            if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
+    protected boolean canvasKeyPressed(int keyCode, int scanCode, int modifiers) {
+        if (isControlFocused(this.searchBox)) {
+            if (KineticKeyBindings.matchesKeyCode(KineticKeyBindings.Key.ENTER, keyCode)
+                    || KineticKeyBindings.matchesKeyCode(KineticKeyBindings.Key.KP_ENTER, keyCode)) {
                 navigateMatch(1);
                 return true;
             }
-            if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
-                this.setFocused(null);
-                this.searchBox.setFocused(false);
+            if (KineticKeyBindings.matchesKeyCode(KineticKeyBindings.Key.ESCAPE, keyCode)) {
+                blurControl(this.searchBox);
                 return true;
             }
         }
 
-        if (Screen.hasControlDown() && keyCode == GLFW.GLFW_KEY_C) {
-            if (hasSelection()) {
-                doCopy();
-                return true;
-            }
-        }
-        if (Screen.hasControlDown() && keyCode == GLFW.GLFW_KEY_F) {
-            this.setFocused(this.searchBox);
-            this.searchBox.setFocused(true);
+        if (KineticClientRuntime.isCopyShortcut(keyCode) && hasSelection()) {
+            doCopy();
             return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        if (KineticClientRuntime.controlModifierDown()
+                && KineticKeyBindings.matchesKeyCode(KineticKeyBindings.Key.F, keyCode)) {
+            focusControl(this.searchBox);
+            return true;
+        }
+        return super.canvasKeyPressed(keyCode, scanCode, modifiers);
     }
 
     private void renderThickScrollbar(GuiGraphics g, int x, int y, int h, double mouseX, double mouseY) {
@@ -327,15 +325,18 @@ public class ChatCopyCanvasScreen extends KineticScreen {
         boolean hovered = mouseX >= x && mouseX < x + SCROLLBAR_WIDTH
                 && mouseY >= handleY && mouseY < handleY + handleH;
 
-        g.fill(x, y, x + SCROLLBAR_WIDTH, y + h, GuiTheme.current().scrollTrack());
-        g.fill(
+        GuiTheme.scrollbar(
+                g,
+                mouseX,
+                mouseY,
                 x,
-                handleY,
-                x + SCROLLBAR_WIDTH,
-                handleY + handleH,
-                isDraggingScrollbar || hovered
-                        ? GuiTheme.current().scrollThumbHover()
-                        : GuiTheme.current().scrollThumb()
+                y,
+                SCROLLBAR_WIDTH,
+                h,
+                handleH,
+                maxScroll,
+                visualScroll(),
+                isDraggingScrollbar
         );
     }
 
@@ -351,14 +352,18 @@ public class ChatCopyCanvasScreen extends KineticScreen {
         int xStart = x + line.getOffset(s);
         int xEnd = x + line.getOffset(e);
 
-        g.fill(xStart, y - 1, xEnd, y + 9, 0x66777777);
+        GuiTheme.indicatorFill(g, xStart, y - 1, Math.max(1, xEnd - xStart), 10, GuiTheme.Indicator.INFO, 0.40F);
     }
 
     private void drawOutwardBorder(GuiGraphics g, int x, int y, int h) {
-        g.fill(x - MARGIN, y - MARGIN, x + FRAME_W + MARGIN, y - MARGIN + 1, GOLDEN_COLOR);
-        g.fill(x - MARGIN, y + h + MARGIN - 1, x + FRAME_W + MARGIN, y + h + MARGIN, GOLDEN_COLOR);
-        g.fill(x - MARGIN, y - MARGIN, x - MARGIN + 1, y + h + MARGIN, GOLDEN_COLOR);
-        g.fill(x + FRAME_W + MARGIN - 1, y - MARGIN, x + FRAME_W + MARGIN, y + h + MARGIN, GOLDEN_COLOR);
+        GuiTheme.indicatorOutline(
+                g,
+                x - MARGIN,
+                y - MARGIN,
+                FRAME_W + MARGIN * 2,
+                h + MARGIN * 2,
+                GuiTheme.Indicator.WARNING
+        );
     }
 
     private boolean isWordChar(char c) {
@@ -420,7 +425,7 @@ public class ChatCopyCanvasScreen extends KineticScreen {
 
     @Override
     protected boolean canvasMouseScrolled(double mx, double my, double delta) {
-        scrollTarget = scrollState.wheel(scrollTarget, delta, LINE_H / 3.0D, getMaxScroll());
+        scrollTarget = scrollState.wheel(scrollTarget, delta, LINE_H, getMaxScroll());
         return true;
     }
 
@@ -459,12 +464,7 @@ public class ChatCopyCanvasScreen extends KineticScreen {
     }
 
     private double visualScroll() {
-        return scrollState.follow(scrollTarget, getMaxScroll());
-    }
-
-    @Override
-    public void onClose() {
-        navigateBack();
+        return scrollState.follow(scrollTarget, getMaxScroll(), false);
     }
 
     private void doCopy() {
@@ -478,7 +478,7 @@ public class ChatCopyCanvasScreen extends KineticScreen {
             if (s < e) sb.append(line.rawText, s, e);
             if (i < l2) sb.append("\n");
         }
-        Minecraft.getInstance().keyboardHandler.setClipboard(sb.toString());
+        KineticClientRuntime.setClipboard(sb.toString());
         this.toastText = Component.translatable("msg.textstudio.chat.copy_success").getString();
         this.toastEndTime = System.currentTimeMillis() + 2500;
     }
@@ -495,7 +495,7 @@ public class ChatCopyCanvasScreen extends KineticScreen {
             StringBuilder sb = new StringBuilder();
             List<Integer> boundaries = new ArrayList<>();
             int[] currentX = {0};
-            var font = Minecraft.getInstance().font;
+            var font = KineticClientRuntime.font();
             boundaries.add(0);
             this.visual.accept((index, style, cp) -> {
                 String s = new String(Character.toChars(cp));

@@ -5,7 +5,6 @@
   "refmap": "textstudio.mixins.refmap.json",
   "mixins": [
     "ChatServerMixins$PacketLengthTweaks",
-    "ChatServerMixins$PlayerListTweaks",
     "ChatServerMixins$ServerPacketTweaks",
     "ChatServerMixins$StringUtilTweaks"
   ],
@@ -17,8 +16,6 @@
     "client.ChatClientMixins$ReportingContextTweaks",
     "client.ChatClientMixins$ReportScreenTweaks",
     "client.ChatClientMixins$SocialInteractionsTweaks",
-    "client.ChatComponentAccessor",
-    "client.ChatCopyMixins",
     "client.ChatSecurityClientMixin"
   ]
 }

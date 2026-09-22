@@ -1,11 +1,11 @@
 package dev.xyat.textstudio.font.mixin.client;
 
+import dev.xyat.kineticcore.api.minecraft.MinecraftPlayers;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import dev.xyat.kineticcore.api.client.search.KineticSearch;
 import dev.xyat.textstudio.font.api.AuthorAPI;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.commands.arguments.EntityArgument;
 import org.spongepowered.asm.mixin.Mixin;
@@ -37,8 +37,8 @@ public abstract class EntityArgumentSuggestionMixin {
             SuggestionsBuilder builder,
             CallbackInfoReturnable<CompletableFuture<Suggestions>> cir
     ) {
-        Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft.getConnection() == null) {
+        var onlinePlayers = MinecraftPlayers.onlinePlayers();
+        if (onlinePlayers.isEmpty()) {
             return;
         }
 
@@ -50,7 +50,7 @@ public abstract class EntityArgumentSuggestionMixin {
         String query = remaining.trim().toLowerCase(Locale.ROOT);
         List<NameMatch> matches = new ArrayList<>();
 
-        for (PlayerInfo info : minecraft.getConnection().getOnlinePlayers()) {
+        for (PlayerInfo info : onlinePlayers) {
             String rawName = info.getProfile().getName();
             AuthorAPI.DisplayInfo display = AuthorAPI.getDisplayInfo(info.getProfile().getId(), rawName);
             if (display == null || display.name == null) {
@@ -58,7 +58,7 @@ public abstract class EntityArgumentSuggestionMixin {
             }
 
             String customName = display.name.trim();
-            if (customName.isEmpty() || customName.equals(rawName) || !isCommandSafe(customName)) {
+            if (customName.isEmpty() || customName.equals(rawName) || isCommandUnsafe(customName)) {
                 continue;
             }
 
@@ -134,13 +134,13 @@ public abstract class EntityArgumentSuggestionMixin {
         }
     }
 
-    private static boolean isCommandSafe(String name) {
+    private static boolean isCommandUnsafe(String name) {
         for (int i = 0; i < name.length(); i++) {
             if (Character.isWhitespace(name.charAt(i))) {
-                return false;
+                return true;
             }
         }
-        return !name.startsWith("@");
+        return name.startsWith("@");
     }
 
     private record NameMatch(String name, int score) {

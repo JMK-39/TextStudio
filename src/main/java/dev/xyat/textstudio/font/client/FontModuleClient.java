@@ -1,8 +1,8 @@
 package dev.xyat.textstudio.font.client;
 
-import dev.xyat.kineticcore.config.client.KTConfigApi;
-import dev.xyat.kineticcore.config.client.KTConfigPage;
-import net.minecraft.client.Minecraft;
+import dev.xyat.kineticcore.api.config.client.KTConfigApi;
+import dev.xyat.kineticcore.api.config.client.KTConfigPage;
+import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import net.minecraft.network.chat.Component;
 
 public class FontModuleClient {
@@ -35,12 +35,10 @@ public class FontModuleClient {
     }
 
     private static void openGuide() {
-        Minecraft minecraft = Minecraft.getInstance();
-        minecraft.setScreen(FontModuleGuideScreen.create(minecraft.screen));
+        KineticClientRuntime.openScreen(FontModuleGuideScreen.create(KineticClientRuntime.currentScreen()));
     }
 
     private static void openEditor() {
-        Minecraft minecraft = Minecraft.getInstance();
-        minecraft.setScreen(FontModuleConfigScreen.create(minecraft.screen));
+        KineticClientRuntime.openScreen(FontModuleConfigScreen.create(KineticClientRuntime.currentScreen()));
     }
 }

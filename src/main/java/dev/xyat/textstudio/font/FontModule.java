@@ -1,33 +1,37 @@
 package dev.xyat.textstudio.font;
 
-import dev.xyat.kineticcore.command.KTCommandApi;
-import dev.xyat.kineticcore.command.KTCommandExtension;
-import dev.xyat.textstudio.font.config.AuthorConfig;
-import dev.xyat.textstudio.font.network.AuthorNetwork;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
-import org.slf4j.Logger;
 import com.mojang.logging.LogUtils;
+import dev.xyat.kineticcore.api.command.CommandExtension;
+import dev.xyat.kineticcore.api.command.CommandText;
+import dev.xyat.kineticcore.api.command.KineticCommands;
+import dev.xyat.kineticcore.api.runtime.KineticModLifecycle;
+import dev.xyat.kineticcore.api.runtime.KineticPlatform;
+import dev.xyat.textstudio.font.client.FontModuleClient;
+import dev.xyat.textstudio.font.config.AuthorConfig;
+import dev.xyat.textstudio.font.event.AuthorSyncHandler;
+import dev.xyat.textstudio.font.network.AuthorNetwork;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.network.chat.MutableComponent;
+import org.slf4j.Logger;
+
+import java.util.List;
 
 public class FontModule {
     public static final String MODID = "textstudio";
     public static final Logger LOGGER = LogUtils.getLogger();
 
     public FontModule() {
-        FMLJavaModLoadingContext.get().getModEventBus().addListener(this::commonSetup);
         AuthorConfig.load();
 
-        KTCommandApi.register(MODID, new KTCommandExtension() {
+        KineticCommands.registerExtension(MODID + ":font", new CommandExtension() {
             @Override
-            public void registerCommands(com.mojang.brigadier.builder.LiteralArgumentBuilder<net.minecraft.commands.CommandSourceStack> root) {
+            public void registerCommands(com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> root) {
                 FontCommand.register(root);
             }
 
             @Override
-            public void appendHelpItems(net.minecraft.commands.CommandSourceStack source, java.util.List<net.minecraft.network.chat.MutableComponent> items) {
-                items.add(dev.xyat.kineticcore.command.CommandUtils.createSuggestCommand(
+            public void appendHelpItems(CommandSourceStack source, List<MutableComponent> items) {
+                items.add(CommandText.suggest(
                         "/kt font",
                         "/kt font ",
                         "cmd.textstudio.font.desc"
@@ -35,13 +39,8 @@ public class FontModule {
             }
         });
 
-        DistExecutor.unsafeRunWhenOn(
-                net.minecraftforge.api.distmarker.Dist.CLIENT,
-                () -> () -> dev.xyat.textstudio.font.client.FontModuleClient.init()
-        );
-    }
-
-    private void commonSetup(FMLCommonSetupEvent event) {
-        event.enqueueWork(AuthorNetwork::register);
+        AuthorSyncHandler.install();
+        KineticModLifecycle.onCommonSetup(AuthorNetwork::register);
+        KineticPlatform.runOnClient(() -> FontModuleClient::init);
     }
 }

@@ -1,64 +1,62 @@
 package dev.xyat.textstudio.font.event;
 
-import dev.xyat.textstudio.font.FontModule;
+import dev.xyat.kineticcore.api.event.KineticEventSubscription;
+import java.util.ArrayList;
+import java.util.List;
+
+import dev.xyat.kineticcore.api.event.KineticEventPriority;
+import dev.xyat.kineticcore.api.server.event.KineticServerEvents;
 import dev.xyat.textstudio.font.api.AuthorAPI;
 import dev.xyat.textstudio.font.api.IAuthorName;
 import dev.xyat.textstudio.font.network.AuthorNetwork;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
 
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-@Mod.EventBusSubscriber(modid = FontModule.MODID)
-public class AuthorSyncHandler {
+public final class AuthorSyncHandler {
+    // These subscriptions remain active for the lifetime of this module.
+    private static final List<KineticEventSubscription> SUBSCRIPTIONS = new ArrayList<>();
     private static final ConcurrentLinkedQueue<UUID> PENDING_SYNC = new ConcurrentLinkedQueue<>();
+    private static boolean installed;
 
-    @SubscribeEvent
-    public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player) {
-            PENDING_SYNC.add(player.getUUID());
-        }
+    private AuthorSyncHandler() {
     }
 
-    @SubscribeEvent
-    public static void onPlayerClone(PlayerEvent.Clone event) {
-        if (event.getOriginal() instanceof IAuthorName oldAuth && event.getEntity() instanceof IAuthorName newAuth) {
-            newAuth.textstudio_font$setState(
-                    oldAuth.textstudio_font$getCustomdiyname(),
-                    oldAuth.textstudio_font$getNameEffect(),
-                    oldAuth.textstudio_font$getStyleFlags()
-            );
-        }
-    }
+    public static synchronized void install() {
+        if (installed) return;
+        installed = true;
 
-    @SubscribeEvent
-    public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player) {
-            PENDING_SYNC.add(player.getUUID());
-        }
-    }
-
-    @SubscribeEvent
-    public static void onPlayerChangedDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player) {
-            PENDING_SYNC.add(player.getUUID());
-        }
-    }
-
-    @SubscribeEvent
-    public static void onServerTick(TickEvent.ServerTickEvent event) {
-        if (event.phase == TickEvent.Phase.END && !PENDING_SYNC.isEmpty()) {
-            UUID uuid;
-            while ((uuid = PENDING_SYNC.poll()) != null) {
-                ServerPlayer player = event.getServer().getPlayerList().getPlayer(uuid);
-                if (player != null) performSync(player);
+        SUBSCRIPTIONS.add(KineticServerEvents.onPlayerLogin(KineticEventPriority.NORMAL, player -> PENDING_SYNC.add(player.getUUID())));
+        SUBSCRIPTIONS.add(KineticServerEvents.onPlayerClone(KineticEventPriority.NORMAL, (original, current, wasDeath) -> {
+            if (original instanceof IAuthorName oldAuth && current instanceof IAuthorName newAuth) {
+                newAuth.textstudio_font$setState(
+                        oldAuth.textstudio_font$getCustomdiyname(),
+                        oldAuth.textstudio_font$getNameEffect(),
+                        oldAuth.textstudio_font$getStyleFlags()
+                );
             }
-        }
+        }));
+        SUBSCRIPTIONS.add(KineticServerEvents.onPlayerRespawn(
+                KineticEventPriority.NORMAL,
+                (player, endConquered) -> PENDING_SYNC.add(player.getUUID())
+        ));
+        SUBSCRIPTIONS.add(KineticServerEvents.onPlayerChangedDimension(
+                KineticEventPriority.NORMAL,
+                (player, from, to) -> PENDING_SYNC.add(player.getUUID())
+        ));
+        SUBSCRIPTIONS.add(KineticServerEvents.onTick(
+                KineticEventPriority.NORMAL,
+                KineticServerEvents.TickPhase.END,
+                server -> {
+                    UUID uuid;
+                    while ((uuid = PENDING_SYNC.poll()) != null) {
+                        ServerPlayer player = server.getPlayerList().getPlayer(uuid);
+                        if (player != null) performSync(player);
+                    }
+                }
+        ));
     }
 
     private static void performSync(ServerPlayer player) {

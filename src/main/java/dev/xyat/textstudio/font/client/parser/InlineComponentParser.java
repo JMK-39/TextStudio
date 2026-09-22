@@ -1,5 +1,7 @@
 package dev.xyat.textstudio.font.client.parser;
 
+import javax.annotation.Nonnull;
+
 import dev.xyat.textstudio.font.api.IStyle;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -51,7 +53,7 @@ public final class InlineComponentParser {
         private boolean hasTextEffect;
 
         @Override
-        public boolean accept(int index, Style style, int codePoint) {
+        public boolean accept(int index, @Nonnull Style style, int codePoint) {
             entries.add(new Entry(style, codePoint));
             if (style instanceof IStyle effectStyle && effectStyle.textstudio_font$getStyleData() != null) {
                 hasTextEffect = true;

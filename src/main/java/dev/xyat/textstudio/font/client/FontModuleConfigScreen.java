@@ -1,29 +1,29 @@
 package dev.xyat.textstudio.font.client;
 
+import dev.xyat.kineticcore.api.client.input.KineticMouseButtons;
 import dev.xyat.kineticcore.api.client.theme.GuiTheme;
-import dev.xyat.kineticcore.api.client.overlay.GuiOverlay;
+import dev.xyat.kineticcore.api.client.overlay.KineticOverlays;
 import dev.xyat.kineticcore.api.client.screen.KineticScreen;
-import dev.xyat.kineticcore.api.client.widget.KineticWidgets.Scroll;
-import dev.xyat.kineticcore.api.client.selector.ColorPickerScreen;
-import dev.xyat.kineticcore.api.client.widget.KineticWidgets.NumericEditBox;
-import dev.xyat.kineticcore.config.client.KTConfigApi;
+import dev.xyat.kineticcore.api.client.widget.scroll.KineticScroll;
+import dev.xyat.kineticcore.api.client.widget.KineticWidgets;
+import dev.xyat.kineticcore.api.client.selector.KineticSelectors;
+import dev.xyat.kineticcore.api.client.widget.button.KineticButtons.StateButton;
+import dev.xyat.kineticcore.api.client.widget.input.KineticNumericFields.NumericEditBox;
+import dev.xyat.kineticcore.api.config.client.KTConfigApi;
+import dev.xyat.kineticcore.api.client.text.KineticText;
+import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import dev.xyat.textstudio.font.api.IStyle;
 import dev.xyat.textstudio.font.config.AuthorConfig;
 import dev.xyat.textstudio.font.client.parser.CompactTagCodec;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.EditBox;
+import dev.xyat.kineticcore.api.client.widget.input.KineticTextFields.KineticEditBox;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.TextColor;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
-import net.minecraftforge.client.ConfigScreenHandler;
-import net.minecraftforge.fml.ModLoadingContext;
 import org.jetbrains.annotations.NotNull;
 
 import java.math.BigDecimal;
@@ -117,10 +117,10 @@ public final class FontModuleConfigScreen extends KineticScreen {
     private boolean categoryMenuOpen;
     private int selectedPreset;
     private double presetScroll;
-    private final Scroll.State presetScrollSmoothing = new Scroll.State();
+    private final KineticScroll.State presetScrollSmoothing = new KineticScroll.State();
     private boolean presetScrollbarDragging;
     private double previewScroll;
-    private final Scroll.State previewScrollSmoothing = new Scroll.State();
+    private final KineticScroll.State previewScrollSmoothing = new KineticScroll.State();
     private boolean previewScrollbarDragging;
     private String previewText;
     private String previewLinesText;
@@ -152,10 +152,7 @@ public final class FontModuleConfigScreen extends KineticScreen {
     }
 
     public static void register() {
-        ModLoadingContext.get().registerExtensionPoint(
-                ConfigScreenHandler.ConfigScreenFactory.class,
-                () -> new ConfigScreenHandler.ConfigScreenFactory((minecraft, parent) -> create(parent))
-        );
+        KTConfigApi.installConfigScreen("textstudio", FontModuleConfigScreen::create);
     }
 
     public static Screen create(Screen parent) {
@@ -164,9 +161,9 @@ public final class FontModuleConfigScreen extends KineticScreen {
 
     private FontModuleConfigScreen(Screen parent) {
         super(Component.translatable("gui.textstudio.font.editor.title"));
+        setParentScreen(parent);
         this.parent = parent;
-        this.previewText = I18n.get("gui.textstudio.font.editor.preview.default");
-        useResponsiveCanvas(CANVAS_W, CANVAS_H, 6);
+        this.previewText = KineticText.get("gui.textstudio.font.editor.preview.default");
 for (AuthorConfig.EffectSettings effect : AuthorConfig.EFFECTS) {
             draftEffects.add(effect.copy());
         }
@@ -189,7 +186,7 @@ for (AuthorConfig.EffectSettings effect : AuthorConfig.EFFECTS) {
                 PREVIEW_Y + 4,
                 56,
                 18,
-                button -> onClose(),
+                () -> onClose(),
                 Component.translatable("gui.textstudio.font.editor.tip.cancel")
         );
         addActionButton(
@@ -198,11 +195,11 @@ for (AuthorConfig.EffectSettings effect : AuthorConfig.EFFECTS) {
                 PREVIEW_Y + 4,
                 56,
                 18,
-                button -> saveAndClose(),
+                () -> saveAndClose(),
                 Component.translatable("gui.textstudio.font.editor.tip.save")
         );
 
-        EditBox previewBox = getEditBox();
+        KineticEditBox previewBox = getEditBox();
 registerTip(
                 PREVIEW_X + 12,
                 PREVIEW_Y + 23,
@@ -217,7 +214,7 @@ registerTip(
                 PREVIEW_Y + 26,
                 56,
                 18,
-                button -> copyPreviewText(),
+                () -> copyPreviewText(),
                 Component.translatable("gui.textstudio.font.editor.tip.copy")
         );
         addActionButton(
@@ -226,7 +223,7 @@ registerTip(
                 PREVIEW_Y + 26,
                 56,
                 18,
-                button -> copyEffectPrefix(),
+                () -> copyEffectPrefix(),
                 Component.translatable("gui.textstudio.font.editor.tip.copy_prefix")
         );
         addActionButton(
@@ -235,7 +232,7 @@ registerTip(
                 PREVIEW_Y + 26,
                 56,
                 18,
-                button -> copyEffectStop(),
+                () -> copyEffectStop(),
                 Component.translatable("gui.textstudio.font.editor.tip.copy_stop")
         );
 
@@ -245,7 +242,7 @@ registerTip(
                 CATEGORY_Y,
                 CATEGORY_W,
                 CATEGORY_H,
-                button -> toggleCategoryMenu(),
+                () -> toggleCategoryMenu(),
                 Component.translatable("gui.textstudio.font.editor.tip.category_selector")
         );
 
@@ -255,23 +252,23 @@ registerTip(
             buildCurrentTab();
         }
 
-        Button addPresetButton = addActionButton(
+        StateButton addPresetButton = addActionButton(
                 Component.translatable("gui.textstudio.font.editor.preset.add"),
                 LIST_X + 10,
                 LIST_Y + LIST_H - 26,
                 LIST_W - 20,
                 18,
-                button -> addPreset(),
+                () -> addPreset(),
                 Component.translatable("gui.textstudio.font.editor.tip.preset_add")
         );
-        addPresetButton.active = draftEffects.size() < MAX_PRESETS;
+        KineticWidgets.setExternalWidgetEnabled(addPresetButton, draftEffects.size() < MAX_PRESETS);
     }
 
-    private @NotNull EditBox getEditBox() {
-        EditBox previewBox = addTextField(PREVIEW_X + 12, PREVIEW_Y + 23, 302, Component.translatable("gui.textstudio.font.editor.preview.input"));
+    private @NotNull KineticEditBox getEditBox() {
+        KineticEditBox previewBox = addTextField(PREVIEW_X + 12, PREVIEW_Y + 23, 302, Component.translatable("gui.textstudio.font.editor.preview.input"));
         previewBox.setMaxLength(4096);
         previewBox.setValue(previewText);
-        previewBox.setHint(Component.translatable("gui.textstudio.font.editor.preview.hint"));
+        previewBox.setPlaceholder(Component.translatable("gui.textstudio.font.editor.preview.hint"));
         previewBox.setResponder(value -> {
             previewText = value;
             previewScroll = 0;
@@ -307,7 +304,7 @@ registerTip(
                     CATEGORY_MENU_Y + 2 + i * CATEGORY_MENU_ROW_H,
                     CATEGORY_W - 6,
                     18,
-                    button -> selectCategory(target),
+                    () -> selectCategory(target),
                     Component.translatable("gui.textstudio.font.editor.tip.tab", tabLabel(target))
             );
         }
@@ -320,7 +317,7 @@ registerTip(
         rebuildUi();
     }
 
-    private Button addActionButton(Component text, int x, int y, int w, int h, Button.OnPress action, Component tip) {
+    private StateButton addActionButton(Component text, int x, int y, int w, int h, Runnable action, Component tip) {
         return addCompactButton(x, y, w, text, tip, action);
     }
 
@@ -501,7 +498,7 @@ registerTip(
                 fieldY(1),
                 145,
                 18,
-                button -> openPaletteEditor(),
+                () -> openPaletteEditor(),
                 Component.translatable("gui.textstudio.font.editor.tip.palette_open")
         );
         fieldLabels.add(new FieldLabel(Component.translatable("gui.textstudio.font.editor.palette.current"), PALETTE_SWATCH_X, PALETTE_SWATCH_Y - 17));
@@ -516,7 +513,7 @@ registerTip(
 
     private void openPaletteEditor() {
         AuthorConfig.EffectSettings s = current();
-        ColorPickerScreen.openPalette(
+        KineticSelectors.openPalette(
                 this,
                 Component.translatable("gui.textstudio.font.editor.palette.open"),
                 parsePalette(s.paletteColors),
@@ -534,7 +531,7 @@ registerTip(
         Component label = Component.translatable(key);
         fieldLabels.add(new FieldLabel(label, x, y + 3));
         boolean value = getter.getAsBoolean();
-        addButton(x + FIELD_CONTROL_OFFSET, y, FIELD_CONTROL_W, Component.translatable(value ? "gui.textstudio.font.editor.state.on" : "gui.textstudio.font.editor.state.off"), null, button -> {
+        addButton(x + FIELD_CONTROL_OFFSET, y, FIELD_CONTROL_W, Component.translatable(value ? "gui.textstudio.font.editor.state.on" : "gui.textstudio.font.editor.state.off"), null, () -> {
                     setter.accept(!getter.getAsBoolean());
                     closeContextMenu();
                     rebuildUi();
@@ -552,7 +549,7 @@ registerTip(
         Component label = Component.translatable(key);
         fieldLabels.add(new FieldLabel(label, x, y + 3));
         NumericEditBox box = addDecimalField(x + FIELD_CONTROL_OFFSET, y, FIELD_CONTROL_W, label, false, min, max, null);
-        box.setValue(NumericEditBox.format(getter.getAsDouble()));
+        box.setDoubleValue(getter.getAsDouble());
         box.setResponder(value -> {
             Double parsed = box.getDoubleValue();
             if (parsed != null) {
@@ -570,7 +567,7 @@ registerTip(
 
     private Component optionToggleTip(String key, Component label) {
         String detailKey = key + ".tip";
-        if (I18n.exists(detailKey)) {
+        if (KineticText.hasTranslation(detailKey)) {
             return Component.translatable(detailKey);
         }
         return Component.translatable("gui.textstudio.font.editor.tip.toggle", label);
@@ -583,7 +580,7 @@ registerTip(
                 formatNumber(min),
                 formatNumber(max)
         );
-        if (I18n.exists(detailKey)) {
+        if (KineticText.hasTranslation(detailKey)) {
             return Component.translatable(detailKey).copy().append(" ").append(range);
         }
         return Component.translatable(
@@ -643,22 +640,22 @@ registerTip(
     }
 
     private void copyPreviewText() {
-        Minecraft.getInstance().keyboardHandler.setClipboard(buildInlineText(current(), previewText));
+        KineticClientRuntime.setClipboard(buildInlineText(current(), previewText));
         showCopyToast();
     }
 
     private void copyEffectPrefix() {
-        Minecraft.getInstance().keyboardHandler.setClipboard(buildEffectPrefix(current()));
+        KineticClientRuntime.setClipboard(buildEffectPrefix(current()));
         showCopyToast();
     }
 
     private void copyEffectStop() {
-        Minecraft.getInstance().keyboardHandler.setClipboard(CompactTagCodec.encodeReset());
+        KineticClientRuntime.setClipboard(CompactTagCodec.encodeReset());
         showCopyToast();
     }
 
     private void showCopyToast() {
-        GuiOverlay.toast(
+        KineticOverlays.toast(
                 "textstudio_copy_success",
                 Component.translatable("msg.textstudio.font.copy.success")
         );
@@ -673,13 +670,6 @@ registerTip(
         KTConfigApi.notifySaved(FontModuleClient.CONFIG_PAGE_ID);
         commitDraft();
         onClose();
-    }
-
-    @Override
-    public void onClose() {
-        if (minecraft != null) {
-            navigateBack();
-        }
     }
 
     @Override
@@ -729,10 +719,10 @@ registerTip(
         int visibleRows = Math.max(1, contentH / LIST_ROW_H);
         int maxScroll = maxPresetScroll();
 
-        double visualPresetScroll = presetScrollSmoothing.follow(presetScroll, maxScroll);
+        double visualPresetScroll = presetScrollSmoothing.follow(presetScroll, maxScroll, false);
         int presetStart = Math.max(0, Math.min((int) Math.floor(visualPresetScroll), maxScroll));
         int presetShift = (int) Math.round((visualPresetScroll - presetStart) * LIST_ROW_H);
-        enableCanvasScissor(graphics, LIST_X + 6, contentY + 1, LIST_X + LIST_W - 12, contentY + contentH - 1);
+        enableUiScissor(graphics, LIST_X + 6, contentY + 1, LIST_X + LIST_W - 12, contentY + contentH - 1);
         for (int row = 0; row < visibleRows + 2; row++) {
             int index = presetStart + row;
             if (index >= draftEffects.size()) break;
@@ -740,17 +730,13 @@ registerTip(
             if (y + LIST_ROW_H <= contentY || y >= contentY + contentH) continue;
             boolean hovered = GuiTheme.hovering(mouseX, mouseY, LIST_X + 7, y, LIST_W - 20, LIST_ROW_H - 2);
             boolean selected = index == selectedPreset;
-            if (selected) {
-                graphics.fill(LIST_X + 7, y, LIST_X + LIST_W - 13, y + LIST_ROW_H - 2, 0x66555555);
-            } else if (hovered) {
-                graphics.fill(LIST_X + 7, y, LIST_X + LIST_W - 13, y + LIST_ROW_H - 2, 0x33444444);
-            }
-            GuiTheme.stateOutline(
+            GuiTheme.stateSurface(
                     graphics,
                     LIST_X + 7,
                     y,
                     LIST_W - 20,
                     LIST_ROW_H - 2,
+                    GuiTheme.Surface.PANEL_ALT,
                     selected,
                     hovered,
                     false
@@ -758,10 +744,10 @@ registerTip(
             graphics.drawString(font, Component.translatable("gui.textstudio.font.editor.preset", index + 1), LIST_X + 11, y + 5, 0xFFFFFF, false);
             renderPresetSwatches(graphics, draftEffects.get(index), y + 5);
         }
-        disableCanvasScissor(graphics);
+        disableUiScissor(graphics);
 
         if (maxScroll > 0) {
-            int thumbHeight = Scroll.calculateThumbHeight(contentH, visibleRows, draftEffects.size(), 18);
+            int thumbHeight = KineticScroll.stateThumbHeight(contentH, visibleRows, draftEffects.size(), 18);
             GuiTheme.scrollbar(
                     graphics,
                     mouseX,
@@ -786,7 +772,7 @@ registerTip(
         int count = Math.min(3, colors.size());
         for (int i = 0; i < count; i++) {
             int color = 0xFF000000 | colors.get(i);
-            graphics.fill(86 + i * 8, y, 86 + i * 8 + 6, y + 6, color);
+            GuiTheme.colorSwatch(graphics, 86 + i * 8, y, 6, 6, color, false);
         }
     }
 
@@ -796,7 +782,7 @@ registerTip(
         int maxScroll = Math.max(0, lines.size() - visibleLines);
         previewScroll = Mth.clamp(previewScroll, 0, maxScroll);
 
-        enableCanvasScissor(
+        enableUiScissor(
                 graphics,
                 PREVIEW_CONTENT_X + 1,
                 PREVIEW_CONTENT_Y + 1,
@@ -806,7 +792,7 @@ registerTip(
         graphics.pose().pushPose();
         graphics.pose().translate(PREVIEW_CONTENT_X + 2, PREVIEW_CONTENT_Y + 3, 0.0f);
         graphics.pose().scale(PREVIEW_SCALE, PREVIEW_SCALE, 1.0f);
-        double visualPreviewScroll = previewScrollSmoothing.follow(previewScroll, maxScroll);
+        double visualPreviewScroll = previewScrollSmoothing.follow(previewScroll, maxScroll, false);
         int previewStart = Math.max(0, Math.min((int) Math.floor(visualPreviewScroll), maxScroll));
         int previewShift = (int) Math.round((visualPreviewScroll - previewStart) * font.lineHeight);
         int end = Math.min(lines.size(), previewStart + visibleLines + 2);
@@ -816,10 +802,10 @@ registerTip(
             graphics.drawString(font, lines.get(i), 0, lineY, 0xFFFFFFFF, true);
         }
         graphics.pose().popPose();
-        disableCanvasScissor(graphics);
+        disableUiScissor(graphics);
 
         if (maxScroll > 0) {
-            int thumbHeight = Scroll.calculateThumbHeight(
+            int thumbHeight = KineticScroll.stateThumbHeight(
                     PREVIEW_CONTENT_H,
                     visibleLines,
                     lines.size(),
@@ -903,8 +889,7 @@ registerTip(
             int row = i / PALETTE_SWATCH_COLS;
             int x = PALETTE_SWATCH_X + col * (PALETTE_SWATCH_CELL + PALETTE_SWATCH_GAP);
             int y = PALETTE_SWATCH_Y + row * (PALETTE_SWATCH_CELL + PALETTE_SWATCH_GAP);
-            graphics.fill(x, y, x + PALETTE_SWATCH_CELL, y + PALETTE_SWATCH_CELL, 0xFF000000 | colors.get(i));
-            graphics.renderOutline(x, y, PALETTE_SWATCH_CELL, PALETTE_SWATCH_CELL, 0xFFFFFFFF);
+            GuiTheme.colorSwatch(graphics, x, y, PALETTE_SWATCH_CELL, PALETTE_SWATCH_CELL, colors.get(i), true);
         }
     }
 
@@ -914,21 +899,21 @@ registerTip(
         if (categoryMenuOpen) {
             Component categoryTip = findCategoryTooltip(scaledMouseX, scaledMouseY);
             if (categoryTip != null) {
-                showTooltip(categoryTip);
+                showTooltipLine(categoryTip);
             }
             return;
         }
 
         Component dynamic = findDynamicTooltip(scaledMouseX, scaledMouseY);
         if (dynamic != null) {
-            showTooltip(dynamic);
+            showTooltipLine(dynamic);
             return;
         }
 
         for (int i = hoverTips.size() - 1; i >= 0; i--) {
             HoverTip tip = hoverTips.get(i);
             if (GuiTheme.hovering(scaledMouseX, scaledMouseY, tip.x(), tip.y(), tip.w(), tip.h())) {
-                showTooltip(tip.text());
+                showTooltipLine(tip.text());
                 return;
             }
         }
@@ -985,7 +970,7 @@ registerTip(
             }
         }
 
-        if (button == 1) {
+        if (KineticMouseButtons.isSecondary(button)) {
             int presetIndex = presetIndexAt(mouseX, mouseY);
             if (presetIndex >= 0) {
                 if (presetIndex != selectedPreset) {
@@ -1002,7 +987,7 @@ registerTip(
             return super.canvasMouseClicked(mouseX, mouseY, button);
         }
 
-        if (button == 0) {
+        if (KineticMouseButtons.isPrimary(button)) {
             int previewMaxScroll = previewMaxScroll();
             if (previewMaxScroll > 0 && GuiTheme.hovering(
                     mouseX,
@@ -1013,13 +998,13 @@ registerTip(
                     PREVIEW_CONTENT_H
             )) {
                 previewScrollbarDragging = true;
-                int thumbHeight = Scroll.calculateThumbHeight(
+                int thumbHeight = KineticScroll.stateThumbHeight(
                         PREVIEW_CONTENT_H,
                         previewVisibleLines(),
                         getPreviewLines().size(),
                         14
                 );
-                previewScroll = Scroll.calculateScrollOffset(
+                previewScroll = KineticScroll.stateOffsetFromPointer(
                         mouseY,
                         PREVIEW_CONTENT_Y,
                         PREVIEW_CONTENT_H,
@@ -1037,8 +1022,8 @@ registerTip(
 
             if (maxScroll > 0 && GuiTheme.hovering(mouseX, mouseY, LIST_X + LIST_W - 10, contentY, 9, contentH)) {
                 presetScrollbarDragging = true;
-                int thumbHeight = Scroll.calculateThumbHeight(contentH, visibleRows, draftEffects.size(), 18);
-                presetScroll = Scroll.calculateScrollOffset(mouseY, contentY, contentH, thumbHeight, maxScroll);
+                int thumbHeight = KineticScroll.stateThumbHeight(contentH, visibleRows, draftEffects.size(), 18);
+                presetScroll = KineticScroll.stateOffsetFromPointer(mouseY, contentY, contentH, thumbHeight, maxScroll);
             presetScrollSmoothing.snap(presetScroll, maxScroll);
                 return true;
             }
@@ -1060,7 +1045,7 @@ registerTip(
 
     @Override
     protected boolean canvasMouseReleased(double mouseX, double mouseY, int button) {
-        if (button == 0 && (presetScrollbarDragging || previewScrollbarDragging)) {
+        if (KineticMouseButtons.isPrimary(button) && (presetScrollbarDragging || previewScrollbarDragging)) {
             presetScrollbarDragging = false;
             previewScrollbarDragging = false;
             return true;
@@ -1070,16 +1055,16 @@ registerTip(
 
     @Override
     protected boolean canvasMouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
-        if (button == 0 && previewScrollbarDragging) {
+        if (KineticMouseButtons.isPrimary(button) && previewScrollbarDragging) {
             int maxScroll = previewMaxScroll();
             if (maxScroll > 0) {
-                int thumbHeight = Scroll.calculateThumbHeight(
+                int thumbHeight = KineticScroll.stateThumbHeight(
                         PREVIEW_CONTENT_H,
                         previewVisibleLines(),
                         getPreviewLines().size(),
                         14
                 );
-                previewScroll = Scroll.calculateScrollOffset(
+                previewScroll = KineticScroll.stateOffsetFromPointer(
                         mouseY,
                         PREVIEW_CONTENT_Y,
                         PREVIEW_CONTENT_H,
@@ -1090,14 +1075,14 @@ registerTip(
             }
             return true;
         }
-        if (button == 0 && presetScrollbarDragging) {
+        if (KineticMouseButtons.isPrimary(button) && presetScrollbarDragging) {
             int contentY = LIST_Y + 25;
             int addButtonY = LIST_Y + LIST_H - 26;
             int contentH = addButtonY - contentY - 5;
             int visibleRows = Math.max(1, contentH / LIST_ROW_H);
             int maxScroll = maxPresetScroll();
-            int thumbHeight = Scroll.calculateThumbHeight(contentH, visibleRows, draftEffects.size(), 18);
-            presetScroll = Scroll.calculateScrollOffset(mouseY, contentY, contentH, thumbHeight, maxScroll);
+            int thumbHeight = KineticScroll.stateThumbHeight(contentH, visibleRows, draftEffects.size(), 18);
+            presetScroll = KineticScroll.stateOffsetFromPointer(mouseY, contentY, contentH, thumbHeight, maxScroll);
             presetScrollSmoothing.snap(presetScroll, maxScroll);
             return true;
         }
@@ -1107,11 +1092,11 @@ registerTip(
     @Override
     protected boolean canvasMouseScrolled(double mouseX, double mouseY, double delta) {
         if (GuiTheme.hovering(mouseX, mouseY, PREVIEW_X, PREVIEW_Y + 43, PREVIEW_W, PREVIEW_H - 43)) {
-            previewScroll = previewScrollSmoothing.wheel(previewScroll, delta, 1.0D / 3.0D, previewMaxScroll());
+            previewScroll = previewScrollSmoothing.wheel(previewScroll, delta, 1.0D, previewMaxScroll());
             return true;
         }
         if (GuiTheme.hovering(mouseX, mouseY, LIST_X, LIST_Y, LIST_W, LIST_H)) {
-            presetScroll = presetScrollSmoothing.wheel(presetScroll, delta, 1.0D / 3.0D, maxPresetScroll());
+            presetScroll = presetScrollSmoothing.wheel(presetScroll, delta, 1.0D, maxPresetScroll());
             return true;
         }
         return super.canvasMouseScrolled(mouseX, mouseY, delta);
@@ -1124,7 +1109,7 @@ registerTip(
         if (!GuiTheme.hovering(mouseX, mouseY, LIST_X + 5, contentY, LIST_W - 18, contentH)) {
             return -1;
         }
-        double visualPresetScroll = presetScrollSmoothing.follow(presetScroll, maxPresetScroll());
+        double visualPresetScroll = presetScrollSmoothing.follow(presetScroll, maxPresetScroll(), false);
         int index = (int) Math.floor((mouseY - contentY) / LIST_ROW_H + visualPresetScroll);
         return index >= 0 && index < draftEffects.size() ? index : -1;
     }
@@ -1144,29 +1129,29 @@ registerTip(
     }
 
     private void openPresetContextMenu(int index, double mouseX, double mouseY) {
-        List<GuiOverlay.MenuItem> items = new ArrayList<>();
-        items.add(GuiOverlay.MenuItem.action(
+        List<KineticOverlays.MenuItem> items = new ArrayList<>();
+        items.add(KineticOverlays.MenuItem.action(
                 Component.translatable("gui.textstudio.font.editor.context.copy_prefix"),
                 this::copyEffectPrefix
         ));
         items.add(draftEffects.size() < MAX_PRESETS
-                ? GuiOverlay.MenuItem.action(
+                ? KineticOverlays.MenuItem.action(
                         Component.translatable("gui.textstudio.font.editor.context.duplicate"),
                         () -> duplicatePreset(index)
                 )
-                : GuiOverlay.MenuItem.disabled(
+                : KineticOverlays.MenuItem.disabled(
                         Component.translatable("gui.textstudio.font.editor.context.duplicate")
                 ));
-        items.add(GuiOverlay.MenuItem.action(
+        items.add(KineticOverlays.MenuItem.action(
                 Component.translatable("gui.textstudio.font.editor.context.reset"),
                 () -> resetPreset(index)
         ));
         items.add(draftEffects.size() > 1
-                ? GuiOverlay.MenuItem.danger(
+                ? KineticOverlays.MenuItem.danger(
                         Component.translatable("gui.textstudio.font.editor.context.delete"),
                         () -> deletePreset(index)
                 )
-                : GuiOverlay.MenuItem.disabled(
+                : KineticOverlays.MenuItem.disabled(
                         Component.translatable("gui.textstudio.font.editor.context.delete")
                 ));
         openContextMenu(mouseX, mouseY, items);

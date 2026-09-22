@@ -1,73 +1,101 @@
 package dev.xyat.textstudio.font.network;
 
-import dev.xyat.kineticcore.api.KTNetworkProtocol;
+import dev.xyat.kineticcore.api.network.ClientboundSender;
+import dev.xyat.kineticcore.api.network.KineticNetwork;
+import dev.xyat.kineticcore.api.network.NetworkChannel;
+import dev.xyat.kineticcore.api.network.NetworkCodec;
+import dev.xyat.kineticcore.api.network.NetworkVersionPolicy;
+import dev.xyat.kineticcore.api.resource.KineticResourceIds;
+import dev.xyat.kineticcore.api.runtime.KineticRegistrationBatch;
 import dev.xyat.textstudio.font.FontModule;
 import dev.xyat.textstudio.font.common.annotation.KTNetwork;
-import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.network.NetworkDirection;
-import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.NetworkRegistry;
-import net.minecraftforge.network.PacketDistributor;
-import net.minecraftforge.network.simple.SimpleChannel;
 
 import java.util.UUID;
-import java.util.function.Supplier;
 
 @KTNetwork
-public class AuthorNetwork {
+public final class AuthorNetwork {
     private static final String PROTOCOL_VERSION = "2";
-    private static int packetId = 0;
-    private static int id() { return packetId++; }
+    private static final NetworkChannel CHANNEL = KineticNetwork.channel(
+            KineticResourceIds.of(FontModule.MODID, "author_identity"),
+            PROTOCOL_VERSION,
+            NetworkVersionPolicy.ANY
+    );
+    private static final KineticRegistrationBatch REGISTRATIONS = new KineticRegistrationBatch();
 
-    public static final SimpleChannel CHANNEL = NetworkRegistry.ChannelBuilder
-            .named(new ResourceLocation(FontModule.MODID, "author_identity"))
-            .networkProtocolVersion(() -> PROTOCOL_VERSION).clientAcceptedVersions(KTNetworkProtocol::acceptsAnyVersion).serverAcceptedVersions(KTNetworkProtocol::acceptsAnyVersion).simpleChannel();
+    private static ClientboundSender<SyncName> syncNameSender;
+    private static ClientboundSender<OpenScreen> openScreenSender;
 
-    public static void register() {
-        CHANNEL.messageBuilder(SyncName.class, id(), NetworkDirection.PLAY_TO_CLIENT).decoder(SyncName::new).encoder(SyncName::toBytes).consumerMainThread(SyncName::handle).add();
-        CHANNEL.messageBuilder(OpenScreen.class, id(), NetworkDirection.PLAY_TO_CLIENT).decoder(OpenScreen::new).encoder(OpenScreen::toBytes).consumerMainThread(OpenScreen::handle).add();
+    private AuthorNetwork() {
     }
 
-    public static class SyncName {
-        public final UUID uuid; public final String name; public final int effect; public final int styleFlags;
-        public SyncName(UUID uuid, String name, int effect, int styleFlags) { this.uuid = uuid; this.name = (name == null) ? "" : name; this.effect = effect; this.styleFlags = styleFlags; }
-        public SyncName(FriendlyByteBuf buf) { this.uuid = buf.readUUID(); this.name = buf.readUtf(); this.effect = buf.readInt(); this.styleFlags = buf.readInt(); }
-        public void toBytes(FriendlyByteBuf buf) { buf.writeUUID(this.uuid); buf.writeUtf(this.name); buf.writeInt(this.effect); buf.writeInt(this.styleFlags); }
-        public void handle(Supplier<NetworkEvent.Context> ctx) {
-            ctx.get().enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> AuthorNetworkClient.handleSync(this)));
-            ctx.get().setPacketHandled(true);
+    public static void register() {
+        REGISTRATIONS.runSequential(
+                () -> syncNameSender = CHANNEL.registerClientbound(
+                        0,
+                        SyncName.class,
+                        NetworkCodec.of(
+                                (buffer, message) -> {
+                                    buffer.writeUuid(message.uuid);
+                                    buffer.writeUtf(message.name);
+                                    buffer.writeInt(message.effect);
+                                    buffer.writeInt(message.styleFlags);
+                                },
+                                buffer -> new SyncName(
+                                        buffer.readUuid(),
+                                        buffer.readUtf(),
+                                        buffer.readInt(),
+                                        buffer.readInt()
+                                )
+                        ),
+                        message -> AuthorNetworkClient.handleSync(message)
+                ),
+                () -> openScreenSender = CHANNEL.registerClientbound(
+                        1,
+                        OpenScreen.class,
+                        NetworkCodec.of(
+                                (buffer, message) -> buffer.writeVarInt(message.screen),
+                                buffer -> new OpenScreen(buffer.readVarInt())
+                        ),
+                        message -> AuthorNetworkClient.handleOpenScreen(message)
+                )
+        );
+    }
+
+    public static final class SyncName {
+        public final UUID uuid;
+        public final String name;
+        public final int effect;
+        public final int styleFlags;
+
+        public SyncName(UUID uuid, String name, int effect, int styleFlags) {
+            this.uuid = uuid;
+            this.name = name == null ? "" : name;
+            this.effect = effect;
+            this.styleFlags = styleFlags;
         }
     }
 
-
-    public static class OpenScreen {
+    public static final class OpenScreen {
         public final int screen;
 
         public OpenScreen(int screen) {
             this.screen = screen;
         }
-
-        public OpenScreen(FriendlyByteBuf buf) {
-            this.screen = buf.readVarInt();
-        }
-
-        public void toBytes(FriendlyByteBuf buf) {
-            buf.writeVarInt(screen);
-        }
-
-        public void handle(Supplier<NetworkEvent.Context> ctx) {
-            ctx.get().enqueueWork(() -> DistExecutor.unsafeRunWhenOn(
-                    Dist.CLIENT,
-                    () -> () -> AuthorNetworkClient.handleOpenScreen(this)
-            ));
-            ctx.get().setPacketHandled(true);
-        }
     }
 
-    public static void sendToPlayer(Object msg, ServerPlayer player) { CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), msg); }
-    public static void sendToAll(Object msg) { CHANNEL.send(PacketDistributor.ALL.noArg(), msg); }
+    public static void sendToPlayer(SyncName message, ServerPlayer player) {
+        if (syncNameSender == null) throw new IllegalStateException("Author sync network is not registered");
+        syncNameSender.send(player, message);
+    }
+
+    public static void sendToPlayer(OpenScreen message, ServerPlayer player) {
+        if (openScreenSender == null) throw new IllegalStateException("Author screen network is not registered");
+        openScreenSender.send(player, message);
+    }
+
+    public static void sendToAll(SyncName message) {
+        if (syncNameSender == null) throw new IllegalStateException("Author sync network is not registered");
+        syncNameSender.broadcast(message);
+    }
 }

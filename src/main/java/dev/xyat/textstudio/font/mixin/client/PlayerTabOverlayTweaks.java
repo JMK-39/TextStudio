@@ -1,7 +1,7 @@
 package dev.xyat.textstudio.font.mixin.client;
 
+import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import dev.xyat.textstudio.font.api.AuthorAPI;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.PlayerTabOverlay;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.network.chat.Component;
@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public class PlayerTabOverlayTweaks {
     @Inject(method = "getNameForDisplay", at = @At("HEAD"), cancellable = true)
     private void textstudio_font$injectTabAuthorName(PlayerInfo info, CallbackInfoReturnable<Component> cir) {
-        if (Minecraft.getInstance().level == null) return;
+        if (KineticClientRuntime.currentLevel() == null) return;
         AuthorAPI.DisplayInfo display = AuthorAPI.getDisplayInfo(info.getProfile().getId(), info.getProfile().getName());
         if (display == null || display.name == null || display.name.isEmpty()) return;
         boolean renamed = !display.name.equals(info.getProfile().getName());

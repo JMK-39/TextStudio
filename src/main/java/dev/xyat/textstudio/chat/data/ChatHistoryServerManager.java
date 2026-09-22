@@ -3,13 +3,10 @@ package dev.xyat.textstudio.chat.data;
 import dev.xyat.textstudio.chat.ChatModule;
 import dev.xyat.textstudio.chat.config.ChatConfig;
 import dev.xyat.textstudio.chat.network.ChatSyncCodec;
-import io.netty.buffer.Unpooled;
+import dev.xyat.textstudio.chat.network.ChatSyncNetwork;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
-import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.protocol.game.ClientboundCustomPayloadPacket;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.saveddata.SavedData;
@@ -26,7 +23,6 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 
 public class ChatHistoryServerManager extends SavedData {
     private static final String DATA_NAME = "textstudio_chat_history";
-    private static final ResourceLocation SYNC_CHANNEL = new ResourceLocation("textstudio", "chat_sync");
     private final Map<UUID, PlayerChatData> playerData = new HashMap<>();
 
     public static ChatHistoryServerManager get(MinecraftServer server) {
@@ -89,10 +85,11 @@ public class ChatHistoryServerManager extends SavedData {
                 ChatSyncCodec.EncodedHistory encoded =
                         ChatSyncCodec.encodeCompressedHistory(newestFirst, maxEntries, configuredMaxChars);
                 if (encoded.entryCount() > 0) {
-                    FriendlyByteBuf payload = new FriendlyByteBuf(Unpooled.buffer());
-                    payload.writeByte(ChatSyncCodec.TYPE_CHAT_HISTORY);
-                    payload.writeBytes(encoded.compressed());
-                    player.connection.send(new ClientboundCustomPayloadPacket(SYNC_CHANNEL, payload));
+                    ChatSyncNetwork.sendToPlayer(
+                            ChatSyncCodec.TYPE_CHAT_HISTORY,
+                            encoded.compressed(),
+                            player
+                    );
 
                     int retained = Math.min(data.chatLines.size(), maxEntries);
                     if (encoded.entryCount() < retained) {
@@ -110,10 +107,11 @@ public class ChatHistoryServerManager extends SavedData {
         for (String input : data.inputLines) {
             try {
                 byte[] encodedInput = ChatSyncCodec.encodeInputLine(input, configuredMaxChars);
-                FriendlyByteBuf payload = new FriendlyByteBuf(Unpooled.buffer());
-                payload.writeByte(ChatSyncCodec.TYPE_INPUT_HISTORY);
-                payload.writeBytes(encodedInput);
-                player.connection.send(new ClientboundCustomPayloadPacket(SYNC_CHANNEL, payload));
+                ChatSyncNetwork.sendToPlayer(
+                        ChatSyncCodec.TYPE_INPUT_HISTORY,
+                        encodedInput,
+                        player
+                );
             } catch (IOException | RuntimeException exception) {
                 ChatModule.LOGGER.debug("Skipping invalid persisted chat input during sync", exception);
             }

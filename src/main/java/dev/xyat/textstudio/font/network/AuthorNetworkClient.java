@@ -3,7 +3,7 @@ package dev.xyat.textstudio.font.network;
 import dev.xyat.textstudio.font.api.AuthorAPI;
 import dev.xyat.textstudio.font.client.FontModuleConfigScreen;
 import dev.xyat.textstudio.font.client.FontModuleGuideScreen;
-import net.minecraft.client.Minecraft;
+import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
@@ -27,11 +27,10 @@ public class AuthorNetworkClient {
     }
 
     public static void handleOpenScreen(AuthorNetwork.OpenScreen packet) {
-        Minecraft minecraft = Minecraft.getInstance();
         if (packet.screen == 1) {
-            minecraft.setScreen(FontModuleConfigScreen.create(minecraft.screen));
+            KineticClientRuntime.openScreen(FontModuleConfigScreen.create(KineticClientRuntime.currentScreen()));
         } else {
-            minecraft.setScreen(FontModuleGuideScreen.create(minecraft.screen));
+            KineticClientRuntime.openScreen(FontModuleGuideScreen.create(KineticClientRuntime.currentScreen()));
         }
     }
 }

@@ -1,9 +1,9 @@
 package dev.xyat.textstudio.font.mixin.client;
 
+import dev.xyat.kineticcore.api.minecraft.MinecraftPlayers;
 import com.mojang.brigadier.suggestion.Suggestion;
 import com.mojang.brigadier.suggestion.Suggestions;
 import dev.xyat.textstudio.font.api.AuthorAPI;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.CommandSuggestions;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import org.spongepowered.asm.mixin.Mixin;
@@ -18,12 +18,11 @@ import java.util.List;
 public class CommandSuggestionsTweaks {
     @Inject(method = "sortSuggestions", at = @At("HEAD"), cancellable = true)
     private void textstudio_font$modifyCommandSuggestions(Suggestions suggestions, CallbackInfoReturnable<List<Suggestion>> cir) {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.getConnection() == null) return;
+        var onlinePlayers = MinecraftPlayers.onlinePlayers();
+        if (onlinePlayers.isEmpty()) return;
 
         List<Suggestion> newList = new ArrayList<>();
         boolean modified = false;
-        var onlinePlayers = mc.getConnection().getOnlinePlayers();
 
         for (Suggestion s : suggestions.getList()) {
             String replacementText = s.getText();

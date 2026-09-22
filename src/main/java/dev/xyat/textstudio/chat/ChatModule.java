@@ -1,23 +1,31 @@
 package dev.xyat.textstudio.chat;
 
+import dev.xyat.kineticcore.api.event.KineticEventSubscription;
+import java.util.ArrayList;
+import java.util.List;
+
 import com.mojang.logging.LogUtils;
+import dev.xyat.kineticcore.api.config.server.KTServerConfigApi;
+import dev.xyat.kineticcore.api.config.server.KTServerConfigSpec;
+import dev.xyat.kineticcore.api.event.KineticEventPriority;
+import dev.xyat.kineticcore.api.runtime.KineticModLifecycle;
+import dev.xyat.kineticcore.api.runtime.KineticPlatform;
+import dev.xyat.kineticcore.api.server.event.KineticServerEvents;
 import dev.xyat.textstudio.chat.command.ChatCommandExtension;
 import dev.xyat.textstudio.chat.config.ChatConfig;
-import dev.xyat.textstudio.chat.config.ChatConfigGui;
+import dev.xyat.textstudio.chat.client.ChatClientIntegration;
+import dev.xyat.textstudio.chat.data.ChatHistoryServerManager;
 import dev.xyat.textstudio.chat.network.ChatSyncCodec;
-import dev.xyat.kineticcore.config.server.KTServerConfigApi;
-import dev.xyat.kineticcore.config.server.KTServerConfigSpec;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import dev.xyat.textstudio.chat.network.ChatSyncNetwork;
 import org.slf4j.Logger;
 
 public final class ChatModule {
+    // These subscriptions remain active for the lifetime of this module.
+    private static final List<KineticEventSubscription> SUBSCRIPTIONS = new ArrayList<>();
     public static final String MODID = "textstudio";
     public static final Logger LOGGER = LogUtils.getLogger();
 
-    public ChatModule(FMLJavaModLoadingContext context) {
+    public ChatModule() {
         ChatConfig.load();
         KTServerConfigApi.register(KTServerConfigSpec.builder("textstudio:chat")
                 .intValue(
@@ -47,6 +55,11 @@ public final class ChatModule {
                 .onSave(ChatConfig::saveServerSettings)
                 .build());
         ChatCommandExtension.install();
-        DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> ChatConfigGui::load);
+        KineticModLifecycle.onCommonSetup(ChatSyncNetwork::register);
+        SUBSCRIPTIONS.add(KineticServerEvents.onPlayerLogin(
+                KineticEventPriority.NORMAL,
+                ChatHistoryServerManager::syncToPlayer
+        ));
+        KineticPlatform.runOnClient(() -> ChatClientIntegration::install);
     }
 }

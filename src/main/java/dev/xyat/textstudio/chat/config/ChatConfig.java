@@ -4,11 +4,11 @@ import com.electronwill.nightconfig.core.file.CommentedFileConfig;
 import com.electronwill.nightconfig.core.io.WritingMode;
 import dev.xyat.textstudio.chat.ChatModule;
 import dev.xyat.textstudio.chat.network.ChatSyncCodec;
-import net.minecraftforge.fml.loading.FMLPaths;
+import dev.xyat.kineticcore.api.runtime.KineticPaths;
 import java.nio.file.Path;
 
 public class ChatConfig {
-    private static final Path CONFIG_PATH = FMLPaths.CONFIGDIR.get().resolve("kineticcore/chat.toml");
+    private static final Path CONFIG_PATH = KineticPaths.configDirectory().resolve("kineticcore/chat.toml");
     private static CommentedFileConfig configData;
 
     public static int maxChatLength = 16384;

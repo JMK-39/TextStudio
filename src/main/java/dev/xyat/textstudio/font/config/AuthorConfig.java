@@ -5,7 +5,7 @@ import com.electronwill.nightconfig.core.io.WritingMode;
 import dev.xyat.textstudio.font.FontModule;
 import dev.xyat.textstudio.font.api.AuthorAPI;
 import dev.xyat.textstudio.font.common.annotation.KTModule;
-import net.minecraftforge.fml.loading.FMLPaths;
+import dev.xyat.kineticcore.api.runtime.KineticPaths;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -15,7 +15,7 @@ import java.util.function.Consumer;
 
 @KTModule
 public class AuthorConfig {
-    private static final Path CONFIG_DIR = FMLPaths.CONFIGDIR.get().resolve("kineticcore");
+    private static final Path CONFIG_DIR = KineticPaths.configDirectory().resolve("kineticcore");
     private static final Path FILE_PATH = CONFIG_DIR.resolve("textstudio_effects.toml");
     private static CommentedFileConfig configData;
     private static int refreshIntervalMs = 33;
@@ -124,7 +124,7 @@ public class AuthorConfig {
             if (!Files.exists(CONFIG_DIR)) Files.createDirectories(CONFIG_DIR);
             configData = CommentedFileConfig.builder(FILE_PATH).sync().preserveInsertionOrder().writingMode(WritingMode.REPLACE).build();
             configData.load();
-            if (configData.isEmpty() || !configData.contains("e")) {
+            if (!configData.contains("e")) {
                 setupDefaults();
                 configData.save();
             }
