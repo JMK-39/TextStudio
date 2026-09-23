@@ -93,6 +93,10 @@ public final class FontModuleConfigScreen extends KineticScreen {
     private static final int CONTEXT_W = 112;
     private static final int CONTEXT_ROW_H = 18;
 
+    public Screen getParent() {
+        return parent;
+    }
+
     private enum EditorTab {
         COLOR,
         MOTION,
@@ -186,7 +190,7 @@ for (AuthorConfig.EffectSettings effect : AuthorConfig.EFFECTS) {
                 PREVIEW_Y + 4,
                 56,
                 18,
-                () -> onClose(),
+                this::onClose,
                 Component.translatable("gui.textstudio.font.editor.tip.cancel")
         );
         addActionButton(
@@ -195,7 +199,7 @@ for (AuthorConfig.EffectSettings effect : AuthorConfig.EFFECTS) {
                 PREVIEW_Y + 4,
                 56,
                 18,
-                () -> saveAndClose(),
+                this::save,
                 Component.translatable("gui.textstudio.font.editor.tip.save")
         );
 
@@ -214,7 +218,7 @@ registerTip(
                 PREVIEW_Y + 26,
                 56,
                 18,
-                () -> copyPreviewText(),
+                this::copyPreviewText,
                 Component.translatable("gui.textstudio.font.editor.tip.copy")
         );
         addActionButton(
@@ -223,7 +227,7 @@ registerTip(
                 PREVIEW_Y + 26,
                 56,
                 18,
-                () -> copyEffectPrefix(),
+                this::copyEffectPrefix,
                 Component.translatable("gui.textstudio.font.editor.tip.copy_prefix")
         );
         addActionButton(
@@ -232,7 +236,7 @@ registerTip(
                 PREVIEW_Y + 26,
                 56,
                 18,
-                () -> copyEffectStop(),
+                this::copyEffectStop,
                 Component.translatable("gui.textstudio.font.editor.tip.copy_stop")
         );
 
@@ -242,7 +246,7 @@ registerTip(
                 CATEGORY_Y,
                 CATEGORY_W,
                 CATEGORY_H,
-                () -> toggleCategoryMenu(),
+                this::toggleCategoryMenu,
                 Component.translatable("gui.textstudio.font.editor.tip.category_selector")
         );
 
@@ -258,7 +262,7 @@ registerTip(
                 LIST_Y + LIST_H - 26,
                 LIST_W - 20,
                 18,
-                () -> addPreset(),
+                this::addPreset,
                 Component.translatable("gui.textstudio.font.editor.tip.preset_add")
         );
         KineticWidgets.setExternalWidgetEnabled(addPresetButton, draftEffects.size() < MAX_PRESETS);
@@ -498,7 +502,7 @@ registerTip(
                 fieldY(1),
                 145,
                 18,
-                () -> openPaletteEditor(),
+                this::openPaletteEditor,
                 Component.translatable("gui.textstudio.font.editor.tip.palette_open")
         );
         fieldLabels.add(new FieldLabel(Component.translatable("gui.textstudio.font.editor.palette.current"), PALETTE_SWATCH_X, PALETTE_SWATCH_Y - 17));
@@ -661,7 +665,7 @@ registerTip(
         );
     }
 
-    private void saveAndClose() {
+    private void save() {
         AuthorConfig.EFFECTS.clear();
         for (AuthorConfig.EffectSettings effect : draftEffects) {
             AuthorConfig.EFFECTS.add(effect.copy());
@@ -669,7 +673,6 @@ registerTip(
         AuthorConfig.save();
         KTConfigApi.notifySaved(FontModuleClient.CONFIG_PAGE_ID);
         commitDraft();
-        onClose();
     }
 
     @Override

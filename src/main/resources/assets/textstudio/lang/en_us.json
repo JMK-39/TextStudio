@@ -198,7 +198,7 @@
   "gui.textstudio.font.editor.context.palette_delete": "§cDelete This Color",
   "gui.textstudio.font.editor.context.palette_clear": "§eClear Palette",
   "gui.textstudio.font.editor.tip.cancel": "§eDiscard this editing session and return.",
-  "gui.textstudio.font.editor.tip.save": "§aSave all presets and close the editor.",
+  "gui.textstudio.font.editor.tip.save": "§aSave all presets and keep the editor open.",
   "gui.textstudio.font.editor.tip.preview_input": "§bType any text here to preview the current preset live below.",
   "gui.textstudio.font.editor.tip.copy": "§aCopy the current effect parameters together with the preview text.",
   "gui.textstudio.font.editor.tip.tab": "§bSwitch to: %s",

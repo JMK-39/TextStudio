@@ -198,7 +198,7 @@
   "gui.textstudio.font.editor.context.palette_delete": "§c删除此颜色",
   "gui.textstudio.font.editor.context.palette_clear": "§e清空调色板",
   "gui.textstudio.font.editor.tip.cancel": "§e放弃本次修改并返回。",
-  "gui.textstudio.font.editor.tip.save": "§a保存全部预设并关闭编辑器。",
+  "gui.textstudio.font.editor.tip.save": "§a保存全部预设，界面保持打开。",
   "gui.textstudio.font.editor.tip.preview_input": "§b输入任意文本，下方会实时显示当前预设效果。",
   "gui.textstudio.font.editor.tip.copy": "§a复制当前效果参数与预览文本，可直接粘贴使用。",
   "gui.textstudio.font.editor.tip.tab": "§b切换到：%s",
