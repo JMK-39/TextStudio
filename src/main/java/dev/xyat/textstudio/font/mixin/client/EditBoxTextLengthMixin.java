@@ -22,6 +22,7 @@ public abstract class EditBoxTextLengthMixin {
 
     @Shadow public abstract void setCursorPosition(int position);
     @Shadow public abstract void setHighlightPos(int position);
+    @Shadow public abstract void moveCursorToEnd();
     @Invoker("onValueChange")
     protected abstract void textstudio_font$invokeOnValueChange(String newText);
 
@@ -33,9 +34,8 @@ public abstract class EditBoxTextLengthMixin {
         String limited = InputMetrics.truncateToVisibleLength(text, maxLength);
         if (filter.test(limited)) {
             value = limited;
-            int editableEnd = InputMetrics.editableContentEnd(value);
-            setCursorPosition(editableEnd);
-            setHighlightPos(editableEnd);
+            moveCursorToEnd();
+            setHighlightPos(cursorPos);
             textstudio_font$invokeOnValueChange(value);
         }
         ci.cancel();
@@ -74,9 +74,8 @@ public abstract class EditBoxTextLengthMixin {
         String limited = InputMetrics.truncateToVisibleLength(value, maxLength);
         if (!limited.equals(value) && filter.test(limited)) {
             value = limited;
-            int editableEnd = InputMetrics.editableContentEnd(value);
-            setCursorPosition(editableEnd);
-            setHighlightPos(editableEnd);
+            moveCursorToEnd();
+            setHighlightPos(cursorPos);
             textstudio_font$invokeOnValueChange(value);
         }
         ci.cancel();
