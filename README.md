@@ -104,7 +104,6 @@ Rendering settings include `performance_refresh_ms`, `performance_max_animated_g
 
 Presets are local definitions. Ship the intended preset configuration with a client pack when you rely on shared preset IDs. Player name state is synchronized separately from the local preset collection.
 
-[Back to language selection](#text-studio)
 
 <a id="chinese"></a>
 
@@ -207,5 +206,3 @@ Text Studio 将动态文字制作、玩家显示名称样式和聊天界面增�
 渲染配置包含 `performance_refresh_ms`、`performance_max_animated_glyphs` 和 `performance_extra_pass_budget`，用于控制动画更新频率、动态字符数量和额外渲染次数。画面中存在大量动态文字时，可结合视觉效果调整这些参数。
 
 预设定义保存在本地。整合包如果依赖统一的预设 ID，应向客户端分发对应预设配置；玩家名称状态与本地预设集合采用不同的保存、同步路径。
-
-[返回语言选择](#text-studio)
