@@ -1,8 +1,8 @@
 package dev.xyat.textstudio.chat.client;
 
 import dev.xyat.kineticcore.api.client.event.KineticClientEvents;
+import dev.xyat.kineticcore.api.client.widget.KineticControl;
 import dev.xyat.kineticcore.api.client.widget.KineticWidgets;
-import dev.xyat.kineticcore.api.client.widget.button.KineticButtons.StateButton;
 import dev.xyat.kineticcore.api.event.KineticEventSubscription;
 import dev.xyat.kineticcore.api.minecraft.MinecraftChat;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
@@ -38,7 +38,7 @@ public final class ChatScreenControls {
         EditBox input = context.findExistingListener(EditBox.class);
         if (input == null) return;
 
-        StateButton button = KineticWidgets.createCompactButton(
+        KineticControl button = KineticWidgets.createCompactButton(
                 5,
                 screen.height - 30,
                 55,
@@ -54,13 +54,13 @@ public final class ChatScreenControls {
     private static void onScreenRender(Screen screen, net.minecraft.client.gui.GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         Entry entry = ENTRIES.get(screen);
         if (entry == null) return;
-        entry.button().setVisible(!entry.input().getValue().startsWith("/"));
+        if (entry.input().getValue().startsWith("/")) return;
         KineticWidgets.renderControl(entry.button(), graphics, mouseX, mouseY, partialTick);
     }
 
     private static void onMousePressed(KineticClientEvents.ScreenMouseButtonContext context) {
         Entry entry = ENTRIES.get(context.screen());
-        if (entry == null || !entry.button().isVisible()) return;
+        if (entry == null || entry.input().getValue().startsWith("/")) return;
         if (entry.button().mouseClicked(context.mouseX(), context.mouseY(), context.button())) {
             context.cancel();
         }
@@ -68,12 +68,12 @@ public final class ChatScreenControls {
 
     private static void onMouseReleased(KineticClientEvents.ScreenMouseButtonContext context) {
         Entry entry = ENTRIES.get(context.screen());
-        if (entry == null || !entry.button().isVisible()) return;
+        if (entry == null || entry.input().getValue().startsWith("/")) return;
         if (entry.button().mouseReleased(context.mouseX(), context.mouseY(), context.button())) {
             context.cancel();
         }
     }
 
-    private record Entry(StateButton button, EditBox input) {
+    private record Entry(KineticControl button, EditBox input) {
     }
 }
