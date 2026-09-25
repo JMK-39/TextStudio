@@ -1,6 +1,6 @@
 ﻿# Text Studio
 
-[English](#english) | [简体中文](#chinese)
+[English](#english) | [简体中文](#chinese) | [CurseForge](https://www.curseforge.com/minecraft/mc-mods/textstudio)
 
 <a id="english"></a>
 
