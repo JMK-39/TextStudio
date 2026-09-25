@@ -75,6 +75,14 @@ public final class InputMetrics {
         return visibleCodePointLength(text) <= Math.max(0, maxVisibleCodePoints);
     }
 
+    public static int editableContentEnd(String text) {
+        if (text == null || text.isEmpty()) {
+            return 0;
+        }
+        int resetStart = text.length() - RESET.length();
+        return resetStart >= 0 && text.startsWith(RESET, resetStart) ? resetStart : text.length();
+    }
+
     public static String truncateToVisibleLength(String text, int maxVisibleCodePoints) {
         if (text == null || text.isEmpty()) {
             return text == null ? "" : text;
