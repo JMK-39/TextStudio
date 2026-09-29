@@ -313,7 +313,7 @@ public final class FontModuleGuidePage extends KineticPage {
         @Override
         protected void renderRowBackground(KineticGraphics graphics, int index, int x, int y, int width, int height,
                                            boolean hovered, boolean selected) {
-            KineticTheme.stateSurface(graphics, x, y, width, height - 1, KineticTheme.Surface.PANEL_ALT,
+            KineticTheme.stateSurface(graphics, x, y + 1, width, height - 2, KineticTheme.Surface.PANEL_ALT,
                     selected, hovered, false);
         }
 
