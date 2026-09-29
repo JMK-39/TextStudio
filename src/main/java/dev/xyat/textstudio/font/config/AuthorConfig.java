@@ -5,7 +5,7 @@ import com.electronwill.nightconfig.core.io.WritingMode;
 import dev.xyat.textstudio.font.FontModule;
 import dev.xyat.textstudio.font.api.AuthorAPI;
 import dev.xyat.textstudio.font.common.annotation.KTModule;
-import dev.xyat.kineticcore.api.runtime.KineticPaths;
+import dev.xyat.kineticcore.api.runtime.KineticPlatform;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -15,7 +15,7 @@ import java.util.function.Consumer;
 
 @KTModule
 public class AuthorConfig {
-    private static final Path CONFIG_DIR = KineticPaths.configDirectory().resolve("kineticcore");
+    private static final Path CONFIG_DIR = KineticPlatform.configDirectory().resolve("kineticcore");
     private static final Path FILE_PATH = CONFIG_DIR.resolve("textstudio_effects.toml");
     private static CommentedFileConfig configData;
     private static int refreshIntervalMs = 33;

@@ -1,12 +1,10 @@
 package dev.xyat.textstudio.chat.mixin.client;
 
-import dev.xyat.textstudio.chat.util.ColorText;
-import dev.xyat.kineticcore.api.client.input.KineticMouseButtons;
-import dev.xyat.kineticcore.api.client.widget.KineticWidgets;
-import dev.xyat.kineticcore.api.client.widget.scroll.KineticScroll;
+import dev.xyat.kineticcore.api.client.gui.KineticGui;
 import dev.xyat.kineticcore.api.minecraft.MinecraftChat;
 import dev.xyat.kineticcore.api.minecraft.MinecraftPlayers;
 import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
+import dev.xyat.kineticcore.api.text.KineticI18n;
 import dev.xyat.textstudio.chat.client.IChatComponentSync;
 import dev.xyat.textstudio.chat.config.ChatConfig;
 import dev.xyat.textstudio.chat.network.ChatSyncCodec;
@@ -18,7 +16,6 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.ChatComponent;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.client.resources.DefaultPlayerSkin;
@@ -114,7 +111,7 @@ public class ChatClientMixins {
                 long ts = textstudio_chat$providedTimestamp != -1 ? textstudio_chat$providedTimestamp : System.currentTimeMillis();
                 String timeNumbers = LocalTime.ofInstant(Instant.ofEpochMilli(ts), ZoneId.systemDefault()).format(textstudio_chat$TIME_FORMAT);
                 String tsString = "[" + timeNumbers + "] ";
-                root.append(ColorText.translatable("chat.textstudio.timestamp", timeNumbers));
+                root.append(KineticI18n.translatable("chat.textstudio.timestamp", timeNumbers));
 
                 // 计算出当前时间戳的宽度，用于稍后渲染头像的 X 轴起始定位
                 tsWidth = KineticClientRuntime.font().width(tsString);
@@ -130,7 +127,7 @@ public class ChatClientMixins {
 
             if (ChatConfig.enableCompactChat && textstudio_chat$counter > 1) {
                 // 使用 I18N 替代硬编码
-                root.append(ColorText.translatable("chat.textstudio.compact", textstudio_chat$counter));
+                root.append(KineticI18n.translatable("chat.textstudio.compact", textstudio_chat$counter));
             }
             return root;
         }
@@ -232,85 +229,6 @@ public class ChatClientMixins {
         }
     }
 
-    @Mixin(ChatScreen.class)
-    public static abstract class ChatScreenTweaks extends net.minecraft.client.gui.screens.Screen {
-        protected ChatScreenTweaks(Component title) { super(title); }
-        @Unique private boolean textstudio_chat$isDraggingScrollbar = false;
-
-        @Unique private int[] textstudio_chat$getScrollbarBounds() {
-            double scale = MinecraftChat.scale();
-            int chatRight = (int) ((MinecraftChat.width() + 4) * scale);
-            int visibleLines = MinecraftChat.linesPerPage();
-            int sbH = (int) (visibleLines * 9 * scale);
-            int chatBottom = this.height - 40;
-            return new int[] { chatRight + 2, chatBottom - sbH, 6, sbH };
-        }
-
-        @Inject(method = "render", at = @At("RETURN"))
-        private void textstudio_chat$renderScrollbar(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick, CallbackInfo ci) {
-            if (!ChatConfig.enableDraggableScrollbar) return;
-            int totalLines = MinecraftChat.activeTrimmedMessageCount();
-            int visibleLines = MinecraftChat.linesPerPage();
-            int maxScroll = totalLines - visibleLines;
-            if (maxScroll <= 0) return;
-
-            int[] bounds = textstudio_chat$getScrollbarBounds();
-            int sbX = bounds[0], sbY = bounds[1], sbW = bounds[2], sbH = bounds[3];
-            int thumbHeight = KineticScroll.stateThumbHeight(sbH, visibleLines, totalLines, 10);
-            boolean isHovered = mouseX >= sbX && mouseX <= sbX + sbW && mouseY >= sbY && mouseY <= sbY + sbH;
-            boolean isDragging = this.textstudio_chat$isDraggingScrollbar || isHovered;
-            int renderScroll = maxScroll - MinecraftChat.activeScrollbarPosition();
-            KineticScroll.renderScrollbarState(guiGraphics, mouseX, mouseY, sbX, sbY, sbW, sbH, thumbHeight, maxScroll, renderScroll, isDragging);
-        }
-
-        @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
-        private void textstudio_chat$onMouseClicked(double mouseX, double mouseY, int button, CallbackInfoReturnable<Boolean> cir) {
-            if (!ChatConfig.enableDraggableScrollbar || !KineticMouseButtons.isPrimary(button)) return;
-            int totalLines = MinecraftChat.activeTrimmedMessageCount();
-            int visibleLines = MinecraftChat.linesPerPage();
-            int maxScroll = totalLines - visibleLines;
-            if (maxScroll <= 0) return;
-
-            int[] bounds = textstudio_chat$getScrollbarBounds();
-            if (mouseX >= bounds[0] && mouseX <= bounds[0] + bounds[2] && mouseY >= bounds[1] && mouseY <= bounds[1] + bounds[3]) {
-                this.textstudio_chat$isDraggingScrollbar = true;
-                int thumbHeight = KineticScroll.stateThumbHeight(bounds[3], visibleLines, totalLines, 10);
-                textstudio_chat$dragScrollbar(mouseY, bounds[1], bounds[3], thumbHeight, maxScroll);
-                cir.setReturnValue(true);
-            }
-        }
-
-        @Inject(method = "mouseDragged", at = @At("HEAD"), cancellable = true)
-        private void textstudio_chat$onMouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY, CallbackInfoReturnable<Boolean> cir) {
-            if (!this.textstudio_chat$isDraggingScrollbar || !KineticMouseButtons.isPrimary(button)) return;
-            int totalLines = MinecraftChat.activeTrimmedMessageCount();
-            int visibleLines = MinecraftChat.linesPerPage();
-            int maxScroll = totalLines - visibleLines;
-            if (maxScroll <= 0) {
-                this.textstudio_chat$isDraggingScrollbar = false;
-                return;
-            }
-            int[] bounds = textstudio_chat$getScrollbarBounds();
-            int thumbHeight = KineticScroll.stateThumbHeight(bounds[3], visibleLines, totalLines, 10);
-            textstudio_chat$dragScrollbar(mouseY, bounds[1], bounds[3], thumbHeight, maxScroll);
-            cir.setReturnValue(true);
-        }
-
-        @Inject(method = "mouseReleased", at = @At("HEAD"))
-        private void textstudio_chat$onMouseReleased(double mouseX, double mouseY, int button, CallbackInfoReturnable<Boolean> cir) {
-            if (KineticMouseButtons.isPrimary(button)) {
-                this.textstudio_chat$isDraggingScrollbar = false;
-            }
-        }
-
-        @Unique private void textstudio_chat$dragScrollbar(double mouseY, int trackY, int trackHeight, int thumbHeight, int maxScroll) {
-            int calculatedOffset = KineticScroll.stateOffsetFromPointer(mouseY, trackY, trackHeight, thumbHeight, maxScroll);
-            int targetScroll = maxScroll - calculatedOffset;
-            int delta = targetScroll - MinecraftChat.activeScrollbarPosition();
-            if (delta != 0) MinecraftChat.scroll(delta);
-        }
-    }
-
     @Mixin(ClientPacketListener.class)
     public static class ClientPacketTweaks {
         @Inject(method = "handlePlayerChat", at = @At("HEAD"))
@@ -346,8 +264,8 @@ public class ChatClientMixins {
         @Inject(method = "<init>", at = @At("RETURN"))
         private void textstudio_chat$hideReportButton(Minecraft p_240760_, net.minecraft.client.gui.screens.social.SocialInteractionsScreen p_240761_, UUID p_240762_, String p_240763_, java.util.function.Supplier<ResourceLocation> p_240764_, boolean p_240765_, CallbackInfo ci) {
             if (ChatConfig.stripChatSignatures && this.reportButton != null) {
-                KineticWidgets.setExternalWidgetVisible(this.reportButton, false);
-                KineticWidgets.setExternalWidgetEnabled(this.reportButton, false);
+                this.reportButton.visible = false;
+                this.reportButton.active = false;
             }
         }
     }
@@ -367,7 +285,7 @@ public class ChatClientMixins {
         @Inject(method = "init", at = @At("HEAD"), cancellable = true)
         private void textstudio_chat$abortReportScreen(CallbackInfo ci) {
             if (ChatConfig.stripChatSignatures) {
-                KineticClientRuntime.openScreen(null);
+                KineticGui.closeScreen();
                 ci.cancel();
             }
         }

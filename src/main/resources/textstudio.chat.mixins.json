@@ -10,7 +10,6 @@
   ],
   "client": [
     "client.ChatClientMixins$ChatComponentTweaks",
-    "client.ChatClientMixins$ChatScreenTweaks",
     "client.ChatClientMixins$ClientPacketTweaks",
     "client.ChatClientMixins$EditBoxTweaks",
     "client.ChatClientMixins$ReportingContextTweaks",

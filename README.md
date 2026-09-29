@@ -1,4 +1,4 @@
-﻿# Text Studio
+# Text Studio
 
 [![🇺🇸 English](https://img.shields.io/badge/%F0%9F%87%BA%F0%9F%87%B8_English-2F81F7?style=for-the-badge)](#english) [![🇨🇳 简体中文](https://img.shields.io/badge/%F0%9F%87%A8%F0%9F%87%B3_%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-DC2828?style=for-the-badge)](#chinese) [![CurseForge](https://img.shields.io/badge/CurseForge-Open-F16436?style=for-the-badge&logo=curseforge&logoColor=white)](https://www.curseforge.com/minecraft/mc-mods/textstudio)
 
@@ -14,7 +14,7 @@ Text Studio combines animated text authoring, player display-name styling, and a
 | --- | --- |
 | Minecraft | 1.20.1 |
 | Forge | 47.4.2 or newer |
-| KineticCore | 26.9.20 or newer; required |
+26.9.28 or newer; required |
 
 Use Text Studio with KineticCore on the client and server for the complete multiplayer feature set. Rendering and local display preferences run on the client; names, chat limits, and persistent history involve the server.
 
@@ -117,7 +117,7 @@ Text Studio 将动态文字制作、玩家显示名称样式和聊天界面增�
 | --- | --- |
 | Minecraft | 1.20.1 |
 | Forge | 47.4.2 或更新版本 |
-| KineticCore | 必需，26.9.20 或更新版本 |
+| KineticCore | 必需，26.9.27 或更新版本 |
 
 完整多人功能需要客户端和服务端配合安装 Text Studio 与 KineticCore。文字渲染和本地显示偏好在客户端运行；名称、聊天限制和历史持久化涉及服务端。
 

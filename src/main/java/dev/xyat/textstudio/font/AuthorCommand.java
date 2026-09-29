@@ -1,5 +1,8 @@
 package dev.xyat.textstudio.font;
 
+import dev.xyat.kineticcore.api.command.CommandText;
+import dev.xyat.kineticcore.api.text.KineticI18n;
+
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -8,9 +11,7 @@ import com.mojang.brigadier.context.CommandContext;
 import dev.xyat.textstudio.font.api.AuthorAPI;
 import dev.xyat.textstudio.font.api.IAuthorName;
 import dev.xyat.textstudio.font.config.AuthorConfig;
-import dev.xyat.textstudio.font.common.command.CommandUtils;
 import dev.xyat.textstudio.font.common.text.AuthorNamePolicy;
-import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
@@ -43,13 +44,13 @@ public class AuthorCommand {
     }
 
     private static int sendHelp(CommandSourceStack source) {
-        source.sendSuccess(() -> CommandUtils.createHeader("cmd.textstudio.font.desc"), false);
-        source.sendSuccess(() -> CommandUtils.createSuggestCommand(LANG_PREFIX + "help.syntax.rename", "/kt font rename ", LANG_PREFIX + "help.set.desc"), false);
-        source.sendSuccess(() -> CommandUtils.createSuggestCommand(LANG_PREFIX + "help.syntax.effect", "/kt font name effect ", LANG_PREFIX + "help.effect.desc"), false);
-        source.sendSuccess(() -> CommandUtils.createSuggestCommand(LANG_PREFIX + "help.syntax.toggle", "/kt font name toggle ", "cmd.textstudio.font.help.switch_hint"), false);
-        source.sendSuccess(() -> CommandUtils.createSuggestCommand(LANG_PREFIX + "help.syntax.clear", "/kt font name clear", LANG_PREFIX + "help.clear.desc"), false);
-        source.sendSuccess(() -> Component.translatable("cmd.textstudio.font.help.header"), false);
-        source.sendSuccess(() -> CommandUtils.createSuggestCommand(LANG_PREFIX + "help.syntax.guide", "/kt font guide", "cmd.textstudio.font.help.dynamic.desc"), false);
+        source.sendSuccess(() -> CommandText.header("cmd.textstudio.font.desc"), false);
+        source.sendSuccess(() -> CommandText.suggest(KineticI18n.translatable(LANG_PREFIX + "help.syntax.rename"), "/kt font rename ", LANG_PREFIX + "help.set.desc"), false);
+        source.sendSuccess(() -> CommandText.suggest(KineticI18n.translatable(LANG_PREFIX + "help.syntax.effect"), "/kt font name effect ", LANG_PREFIX + "help.effect.desc"), false);
+        source.sendSuccess(() -> CommandText.suggest(KineticI18n.translatable(LANG_PREFIX + "help.syntax.toggle"), "/kt font name toggle ", "cmd.textstudio.font.help.switch_hint"), false);
+        source.sendSuccess(() -> CommandText.suggest(KineticI18n.translatable(LANG_PREFIX + "help.syntax.clear"), "/kt font name clear", LANG_PREFIX + "help.clear.desc"), false);
+        source.sendSuccess(() -> KineticI18n.translatable("cmd.textstudio.font.help.header"), false);
+        source.sendSuccess(() -> CommandText.suggest(KineticI18n.translatable(LANG_PREFIX + "help.syntax.guide"), "/kt font guide", "cmd.textstudio.font.help.dynamic.desc"), false);
         return 1;
     }
 
@@ -58,20 +59,20 @@ public class AuthorCommand {
             ServerPlayer player = context.getSource().getPlayerOrException();
             String finalName = normalizeName(rawName);
             if (!isValidName(finalName)) {
-                context.getSource().sendFailure(Component.translatable(LANG_PREFIX + "set.fail.invalid_name"));
+                context.getSource().sendFailure(KineticI18n.translatable(LANG_PREFIX + "set.fail.invalid_name"));
                 return 0;
             }
             if (AuthorAPI.isReservedName(finalName) && !AuthorAPI.isAuthor(player)) {
-                context.getSource().sendFailure(Component.translatable(LANG_PREFIX + "set.fail.reserved"));
+                context.getSource().sendFailure(KineticI18n.translatable(LANG_PREFIX + "set.fail.reserved"));
                 return 0;
             }
             if (AuthorAPI.isNameTaken(Objects.requireNonNull(player.getServer()), finalName, player.getUUID())) {
-                context.getSource().sendFailure(Component.translatable(LANG_PREFIX + "set.fail.taken"));
+                context.getSource().sendFailure(KineticI18n.translatable(LANG_PREFIX + "set.fail.taken"));
                 return 0;
             }
             if (player instanceof IAuthorName auth) {
                 auth.textstudio_font$setCustomdiyname(finalName);
-                context.getSource().sendSuccess(() -> Component.translatable(LANG_PREFIX + "set.success", Component.literal(finalName).withStyle(ChatFormatting.GOLD)), false);
+                context.getSource().sendSuccess(() -> KineticI18n.translatable(LANG_PREFIX + "set.success", Component.literal(finalName)), false);
                 player.refreshDisplayName();
             }
         } catch (Exception ignored) {
@@ -95,19 +96,19 @@ public class AuthorCommand {
             int max = AuthorConfig.EFFECTS.size();
             boolean special = id == AuthorAPI.SPECIAL_AUTHOR_EFFECT;
             if (special && !author) {
-                context.getSource().sendFailure(Component.translatable(LANG_PREFIX + "effect.fail.author_only"));
+                context.getSource().sendFailure(KineticI18n.translatable(LANG_PREFIX + "effect.fail.author_only"));
                 return 0;
             }
             if (!special && (id < 1 || id > max)) {
-                context.getSource().sendFailure(Component.translatable("cmd.textstudio.font.effect.fail.invalid_id", Component.literal(String.valueOf(max)).withStyle(ChatFormatting.GOLD)));
+                context.getSource().sendFailure(KineticI18n.translatable("cmd.textstudio.font.effect.fail.invalid_id", Component.literal(String.valueOf(max))));
                 return 0;
             }
             if (player instanceof IAuthorName auth) {
                 auth.textstudio_font$setNameEffect(id);
                 if (!author && AuthorConfig.hasAdvancedFeatures(id)) {
-                    context.getSource().sendSuccess(() -> Component.translatable(LANG_PREFIX + "effect.filtered", Component.literal(String.valueOf(id)).withStyle(ChatFormatting.AQUA)), false);
+                    context.getSource().sendSuccess(() -> KineticI18n.translatable(LANG_PREFIX + "effect.filtered", Component.literal(String.valueOf(id))), false);
                 } else {
-                    context.getSource().sendSuccess(() -> Component.translatable(LANG_PREFIX + "effect.success", Component.literal(String.valueOf(id)).withStyle(ChatFormatting.AQUA)), false);
+                    context.getSource().sendSuccess(() -> KineticI18n.translatable(LANG_PREFIX + "effect.success", Component.literal(String.valueOf(id))), false);
                 }
                 player.refreshDisplayName();
             }
@@ -121,15 +122,14 @@ public class AuthorCommand {
         try {
             ServerPlayer player = source.getPlayerOrException();
             if (authorOnly && !AuthorAPI.isAuthor(player)) {
-                source.sendFailure(Component.translatable(LANG_PREFIX + "style.fail.author_only"));
+                source.sendFailure(KineticI18n.translatable(LANG_PREFIX + "style.fail.author_only"));
                 return 0;
             }
             if (player instanceof IAuthorName auth) {
                 auth.toggleStyleFlag(flagBit, enable);
-                Component styleName = Component.translatable(LANG_PREFIX + "style." + nameKey).withStyle(ChatFormatting.GOLD);
-                Component state = Component.translatable(LANG_PREFIX + (enable ? "state.on" : "state.off"))
-                        .withStyle(enable ? ChatFormatting.GREEN : ChatFormatting.RED);
-                source.sendSuccess(() -> Component.translatable(LANG_PREFIX + "toggle.success", styleName, state), false);
+                Component styleName = KineticI18n.translatable(LANG_PREFIX + "style." + nameKey);
+                Component state = KineticI18n.translatable(LANG_PREFIX + (enable ? "state.on" : "state.off"));
+                source.sendSuccess(() -> KineticI18n.translatable(LANG_PREFIX + "toggle.success", styleName, state), false);
                 player.refreshDisplayName();
             }
         } catch (Exception ignored) {
@@ -143,7 +143,7 @@ public class AuthorCommand {
             ServerPlayer player = context.getSource().getPlayerOrException();
             if (player instanceof IAuthorName auth) {
                 auth.textstudio_font$setCustomdiyname(null);
-                context.getSource().sendSuccess(() -> Component.translatable(LANG_PREFIX + "clear.success"), false);
+                context.getSource().sendSuccess(() -> KineticI18n.translatable(LANG_PREFIX + "clear.success"), false);
                 player.refreshDisplayName();
             }
         } catch (Exception ignored) {

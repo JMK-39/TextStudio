@@ -1,9 +1,9 @@
 package dev.xyat.textstudio.font.network;
 
 import dev.xyat.textstudio.font.api.AuthorAPI;
-import dev.xyat.textstudio.font.client.FontModuleConfigScreen;
-import dev.xyat.textstudio.font.client.FontModuleGuideScreen;
-import dev.xyat.kineticcore.api.runtime.KineticClientRuntime;
+import dev.xyat.kineticcore.api.client.gui.KineticGui;
+import dev.xyat.textstudio.font.client.FontModuleConfigPage;
+import dev.xyat.textstudio.font.client.FontModuleGuidePage;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
@@ -28,9 +28,9 @@ public class AuthorNetworkClient {
 
     public static void handleOpenScreen(AuthorNetwork.OpenScreen packet) {
         if (packet.screen == 1) {
-            KineticClientRuntime.openScreen(FontModuleConfigScreen.create(KineticClientRuntime.currentScreen()));
+            KineticGui.openChild(new FontModuleConfigPage());
         } else {
-            KineticClientRuntime.openScreen(FontModuleGuideScreen.create(KineticClientRuntime.currentScreen()));
+            KineticGui.openChild(new FontModuleGuidePage());
         }
     }
 }
