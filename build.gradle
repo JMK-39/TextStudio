@@ -121,6 +121,13 @@ repositories {
 
 
 apply from: 'gradle/kinetic-addon-reobf-verification.gradle'
+apply from: 'gradle/kinetic-addon-architecture.gradle'
+// ChatScreen's existing EditBox and Font mixin callbacks require native types; no Kinetic API owns these objects.
+// 聊天框的现有 EditBox 与 Font Mixin 渲染回调需要原版类型，核心 API 无法替换这些宿主对象。
+ext.kineticArchitectureAllow = [
+    'src/main/java/dev/xyat/textstudio/chat/client/ChatScreenControls.java': ['vanilla-gui-type'],
+    'src/main/java/dev/xyat/textstudio/font/client/render/CompatibleFontRenderer.java': ['vanilla-gui-type']
+]
 
 dependencies {
     minecraft "net.minecraftforge:forge:${project.findProperty('minecraft_version')?.toString()}-${project.findProperty('forge_version')?.toString()}"
