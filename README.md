@@ -104,6 +104,8 @@ Rendering settings include `performance_refresh_ms`, `performance_max_animated_g
 
 Presets are local definitions. Ship the intended preset configuration with a client pack when you rely on shared preset IDs. Player name state is synchronized separately from the local preset collection.
 
+The style-prefix control characters (`U+2061..U+2064` and `U+FE00..U+FE0F`) are internal identifiers that only drive the effect colors. They are never drawn and never take up width: the font layer turns them into zero-width empty glyphs, so even where a prefix is not parsed or gets split (tooltip wrapping, toasts, other mods' own text drawing) no placeholder boxes appear.
+
 
 <a id="chinese"></a>
 
@@ -206,3 +208,5 @@ Text Studio 将动态文字制作、玩家显示名称样式和聊天界面增�
 渲染配置包含 `performance_refresh_ms`、`performance_max_animated_glyphs` 和 `performance_extra_pass_budget`，用于控制动画更新频率、动态字符数量和额外渲染次数。画面中存在大量动态文字时，可结合视觉效果调整这些参数。
 
 预设定义保存在本地。整合包如果依赖统一的预设 ID，应向客户端分发对应预设配置；玩家名称状态与本地预设集合采用不同的保存、同步路径。
+
+样式前缀码用到的控制字符（`U+2061..U+2064` 与 `U+FE00..U+FE0F`）只是用来控制效果颜色的内部标识：任何情况下都不会被画出来，也不占宽度。字体层会把它们变成零宽度的空字形，所以即使某条路径没有解析前缀码或把它拆开（物品提示换行、Toast、其他模组自绘的文字），也不会出现占位方框。

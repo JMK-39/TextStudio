@@ -16,6 +16,7 @@
     "client.PlayerTabOverlayTweaks",
     "client.StringDecomposerAccess",
     "client.CompatibleFontMixin",
+    "client.FontSetMixin",
     "client.ChatComponentMixin",
     "client.GuiGraphicsMixin",
     "client.EditBoxTextLengthMixin",
