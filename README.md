@@ -22,8 +22,8 @@ Text Studio 整合动态文字制作、玩家显示名称样式与聊天增强�
 
 [GitHub project / 项目仓库](https://github.com/JMK-39/TextStudio) · [CurseForge](https://www.curseforge.com/minecraft/mc-mods/textstudio)
 
-Detailed tutorials have been prepared as a local GitHub Wiki draft; the Wiki is pending publication.
+See the [English Wiki tutorial](https://github.com/JMK-39/TextStudio/wiki/Tutorial) for detailed instructions (pages prepared locally; publication pending).
 
-详细教程已整理为本地 GitHub Wiki 草稿，Wiki 待上线。
+详细用法见[中文 Wiki 教程](https://github.com/JMK-39/TextStudio/wiki/使用教程)（页面已在本地整理，待上线）。
 
 [Changelog / 更新日志](CHANGELOG.md)
