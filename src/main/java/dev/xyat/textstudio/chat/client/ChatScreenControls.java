@@ -67,6 +67,12 @@ public final class ChatScreenControls {
     private record Entry(KineticButton button, EditBox input, ChatScrollbar scrollbar) {
     }
 
+    /** Only replace the vanilla thumb when this screen has a usable custom scrollbar. */
+    public static boolean replacesVanillaScrollbar() {
+        Entry entry = ENTRIES.get(dev.xyat.kineticcore.api.runtime.KineticClientRuntime.currentScreen());
+        return entry != null && ChatConfig.enableDraggableScrollbar && entry.scrollbar().sync() > 0;
+    }
+
     /**
      * 聊天滚动条：原版滚动位置 0 表示最底部，这里映射为 Kinetic 滚动偏移（0 = 顶部）。
      * Chat scrollbar. Vanilla chat position 0 is the bottom; it is mapped to a Kinetic offset (0 = top).

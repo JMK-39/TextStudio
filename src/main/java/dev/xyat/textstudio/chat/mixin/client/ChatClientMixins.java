@@ -55,6 +55,16 @@ public class ChatClientMixins {
         @Unique private static final DateTimeFormatter textstudio_chat$TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
         @Unique private UUID textstudio_chat$lastSenderUUID = null;
 
+        //? if >=1.21 {
+        /*// In 1.21.1 these two depth-100 fills belong only to the vanilla scrollbar.
+        @Redirect(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphics;fill(IIIIII)V"), require = 2)
+        private void textstudio_chat$renderVanillaScrollbar(GuiGraphics graphics, int x1, int y1, int x2, int y2, int depth, int color) {
+            if (!dev.xyat.textstudio.chat.client.ChatScreenControls.replacesVanillaScrollbar()) {
+                graphics.fill(x1, y1, x2, y2, depth, color);
+            }
+        }
+        *///?}
+
         @Unique private final Map<GuiMessage.Line, UUID> textstudio_chat$lineToUuidMap = new WeakHashMap<>();
         @Unique private final Map<Component, UUID> textstudio_chat$componentToUuidMap = new WeakHashMap<>();
 
