@@ -69,7 +69,11 @@ public class ChatClientMixins {
         @Override public void textstudio_chat$setProvidedTimestamp(long timestamp) { this.textstudio_chat$providedTimestamp = timestamp; }
         @Override public void textstudio_chat$setCapturedSender(UUID uuid) { this.textstudio_chat$lastSenderUUID = uuid; }
 
+        //? if >=1.21 {
+        /*@ModifyConstant(method = {"addMessageToQueue", "addMessageToDisplayQueue"}, constant = @Constant(intValue = 100))
+        *///?} else {
         @ModifyConstant(method = "addMessage(Lnet/minecraft/network/chat/Component;Lnet/minecraft/network/chat/MessageSignature;ILnet/minecraft/client/GuiMessageTag;Z)V", constant = @Constant(intValue = 100))
+        //?}
         private int textstudio_chat$expandChatHistory(int original) { return ChatConfig.maxChatHistoryLines; }
 
         @Inject(method = "addRecentChat", at = @At("HEAD"))
@@ -85,7 +89,12 @@ public class ChatClientMixins {
         }
 
         @Inject(method = "addMessage(Lnet/minecraft/network/chat/Component;Lnet/minecraft/network/chat/MessageSignature;ILnet/minecraft/client/GuiMessageTag;Z)V", at = @At("HEAD"))
+        //? if >=1.21 {
+        /*private void textstudio_chat$onAddMessageHead(Component component, MessageSignature signature, GuiMessageTag tag, CallbackInfo ci) {
+            boolean refresh = false;
+        *///?} else {
         private void textstudio_chat$onAddMessageHead(Component component, MessageSignature signature, int tick, GuiMessageTag tag, boolean refresh, CallbackInfo ci) {
+        //?}
             this.textstudio_chat$isRefreshing = refresh;
             if (refresh) return;
             this.textstudio_chat$capturedOriginal = component;
@@ -133,7 +142,12 @@ public class ChatClientMixins {
         }
 
         @Inject(method = "addMessage(Lnet/minecraft/network/chat/Component;Lnet/minecraft/network/chat/MessageSignature;ILnet/minecraft/client/GuiMessageTag;Z)V", at = @At("RETURN"))
+        //? if >=1.21 {
+        /*private void textstudio_chat$onAddMessageReturn(Component component, MessageSignature signature, GuiMessageTag guiTag, CallbackInfo ci) {
+            boolean refresh = false;
+        *///?} else {
         private void textstudio_chat$onAddMessageReturn(Component component, MessageSignature signature, int tick, GuiMessageTag guiTag, boolean refresh, CallbackInfo ci) {
+        //?}
             // 1. 获取消息发送者的 UUID 及时间戳宽度
             UUID messageUuid = textstudio_chat$lastSenderUUID;
             int tsWidth = this.textstudio_chat$lastTimestampWidth;
@@ -175,7 +189,11 @@ public class ChatClientMixins {
                     ChatSyncNetwork.sendToServer(
                             ChatSyncCodec.TYPE_CHAT_LINE,
                             ChatSyncCodec.encodeChatLine(
+                                    //? if >=1.21 {
+                                    /*Component.Serializer.toJson(this.textstudio_chat$capturedOriginal, KineticClientRuntime.localPlayer().registryAccess()),
+                                    *///?} else {
                                     Component.Serializer.toJson(this.textstudio_chat$capturedOriginal),
+                                    //?}
                                     System.currentTimeMillis(),
                                     textstudio_chat$lastSenderUUID,
                                     ChatConfig.maxChatLength
@@ -185,6 +203,20 @@ public class ChatClientMixins {
             }
             textstudio_chat$lastSenderUUID = null;
         }
+
+        //? if >=1.21 {
+        /*@Inject(method = "addMessageToDisplayQueue", at = @At("RETURN"))
+        private void textstudio_chat$restoreLineMetadata(GuiMessage message, CallbackInfo ci) {
+            UUID uuid = textstudio_chat$componentToUuidMap.get(message.content());
+            if (uuid == null) return;
+            List<GuiMessage.Line> lines = MinecraftChat.trimmedMessages((ChatComponent) (Object) this);
+            if (lines.isEmpty()) return;
+            int first = 0;
+            for (int i = 1; i < lines.size() && !lines.get(i).endOfEntry(); i++) first = i;
+            textstudio_chat$lineToUuidMap.put(lines.get(first), uuid);
+            textstudio_chat$lineToTsWidthMap.put(lines.get(first), textstudio_chat$componentToTsWidthMap.getOrDefault(message.content(), 0));
+        }
+        *///?}
 
         @ModifyVariable(method = "render", at = @At(value = "STORE"), ordinal = 0)
         private GuiMessage.Line textstudio_chat$captureRenderingLine(GuiMessage.Line line) {
@@ -217,7 +249,11 @@ public class ChatClientMixins {
 
         @Unique private ResourceLocation textstudio_chat$getSkin(UUID uuid) {
             PlayerInfo info = MinecraftPlayers.playerInfo(uuid);
+            //? if >=1.21 {
+            /*return info != null ? info.getSkin().texture() : DefaultPlayerSkin.get(uuid).texture();
+            *///?} else {
             return info != null ? info.getSkinLocation() : DefaultPlayerSkin.getDefaultSkin(uuid);
+            //?}
         }
 
         @Inject(method = "clearMessages", at = @At("HEAD"))
@@ -280,10 +316,17 @@ public class ChatClientMixins {
         }
     }
 
+    //? if >=1.21 {
+    /*@Mixin(net.minecraft.client.gui.screens.reporting.AbstractReportScreen.class)
+    *///?} else {
     @Mixin(net.minecraft.client.gui.screens.reporting.ChatReportScreen.class)
+    //?}
     public static abstract class ReportScreenTweaks {
         @Inject(method = "init", at = @At("HEAD"), cancellable = true)
         private void textstudio_chat$abortReportScreen(CallbackInfo ci) {
+            //? if >=1.21 {
+            /*if (!((Object) this instanceof net.minecraft.client.gui.screens.reporting.ChatReportScreen)) return;
+            *///?}
             if (ChatConfig.stripChatSignatures) {
                 KineticGui.closeScreen();
                 ci.cancel();

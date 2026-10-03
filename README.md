@@ -12,9 +12,9 @@ Text Studio combines animated text authoring, player display-name styling, and a
 
 | Component | Requirement |
 | --- | --- |
-| Minecraft | 1.20.1 |
-| Forge | 47.4.2 or newer |
-26.9.28 or newer; required |
+| Minecraft / loader | 1.20.1 / Forge 47.4.2+; 1.21.1 / NeoForge 21.1.252+ |
+| Java | 21 or newer |
+| KineticCore | 26.10.3 or newer, matching Minecraft and loader; required |
 
 Use Text Studio with KineticCore on the client and server for the complete multiplayer feature set. Rendering and local display preferences run on the client; names, chat limits, and persistent history involve the server.
 
@@ -117,9 +117,9 @@ Text Studio 将动态文字制作、玩家显示名称样式和聊天界面增�
 
 | 组件 | 要求 |
 | --- | --- |
-| Minecraft | 1.20.1 |
-| Forge | 47.4.2 或更新版本 |
-| KineticCore | 必需，26.9.27 或更新版本 |
+| Minecraft / 加载器 | 1.20.1 / Forge 47.4.2+；1.21.1 / NeoForge 21.1.252+ |
+| Java | 21 或更新版本 |
+| KineticCore | 必需，26.10.3 或更新版本，且 Minecraft 和加载器一致 |
 
 完整多人功能需要客户端和服务端配合安装 Text Studio 与 KineticCore。文字渲染和本地显示偏好在客户端运行；名称、聊天限制和历史持久化涉及服务端。
 

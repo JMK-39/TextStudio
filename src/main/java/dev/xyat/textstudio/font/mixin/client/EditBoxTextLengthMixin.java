@@ -22,7 +22,11 @@ public abstract class EditBoxTextLengthMixin {
 
     @Shadow public abstract void setCursorPosition(int position);
     @Shadow public abstract void setHighlightPos(int position);
+    //? if >=1.21 {
+    /*@Shadow public abstract void moveCursorToEnd(boolean selecting);
+    *///?} else {
     @Shadow public abstract void moveCursorToEnd();
+    //?}
     @Invoker("onValueChange")
     protected abstract void textstudio_font$invokeOnValueChange(String newText);
 
@@ -34,7 +38,11 @@ public abstract class EditBoxTextLengthMixin {
         String limited = InputMetrics.truncateToVisibleLength(text, maxLength);
         if (filter.test(limited)) {
             value = limited;
+            //? if >=1.21 {
+            /*moveCursorToEnd(false);
+            *///?} else {
             moveCursorToEnd();
+            //?}
             setHighlightPos(cursorPos);
             textstudio_font$invokeOnValueChange(value);
         }
@@ -49,7 +57,11 @@ public abstract class EditBoxTextLengthMixin {
 
         int start = Math.min(cursorPos, highlightPos);
         int end = Math.max(cursorPos, highlightPos);
+        //? if >=1.21 {
+        /*String filtered = net.minecraft.util.StringUtil.filterText(textToWrite);
+        *///?} else {
         String filtered = SharedConstants.filterText(textToWrite);
+        //?}
         int selectedVisible = InputMetrics.visibleCodePointLength(value.substring(start, end));
         int currentVisible = InputMetrics.visibleCodePointLength(value);
         int remainingVisible = Math.max(0, maxLength - (currentVisible - selectedVisible));
@@ -74,7 +86,11 @@ public abstract class EditBoxTextLengthMixin {
         String limited = InputMetrics.truncateToVisibleLength(value, maxLength);
         if (!limited.equals(value) && filter.test(limited)) {
             value = limited;
+            //? if >=1.21 {
+            /*moveCursorToEnd(false);
+            *///?} else {
             moveCursorToEnd();
+            //?}
             setHighlightPos(cursorPos);
             textstudio_font$invokeOnValueChange(value);
         }

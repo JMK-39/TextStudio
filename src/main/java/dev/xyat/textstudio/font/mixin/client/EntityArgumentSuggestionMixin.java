@@ -6,6 +6,8 @@ import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import dev.xyat.kineticcore.api.client.search.KineticSearch;
 import dev.xyat.textstudio.font.api.AuthorAPI;
+import dev.xyat.textstudio.font.client.NameSuggestionSupport;
+import dev.xyat.textstudio.font.client.NameSuggestionSupport.NameMatch;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.commands.arguments.EntityArgument;
 import org.spongepowered.asm.mixin.Mixin;
@@ -23,13 +25,7 @@ import java.util.concurrent.CompletableFuture;
 
 @Mixin(EntityArgument.class)
 public abstract class EntityArgumentSuggestionMixin {
-    private static final int SEARCH_CACHE_LIMIT = 256;
-    private static final Map<String, KineticSearch.PinyinData> SEARCH_CACHE = new LinkedHashMap<>(64, 0.75F, true) {
-        @Override
-        protected boolean removeEldestEntry(Map.Entry<String, KineticSearch.PinyinData> eldest) {
-            return size() > SEARCH_CACHE_LIMIT;
-        }
-    };
+    private static final Map<String, KineticSearch.PinyinData> SEARCH_CACHE = NameSuggestionSupport.newCache();
 
     @Inject(method = "listSuggestions", at = @At("RETURN"), cancellable = true)
     private <S> void textstudio_font$appendCustomPlayerNames(
@@ -143,6 +139,4 @@ public abstract class EntityArgumentSuggestionMixin {
         return name.startsWith("@");
     }
 
-    private record NameMatch(String name, int score) {
-    }
 }

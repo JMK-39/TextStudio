@@ -28,17 +28,21 @@ public class StyleMixin implements IStyle {
             "withBold", "withItalic", "withUnderlined", "withStrikethrough", "withObfuscated",
             "withClickEvent", "withHoverEvent", "withInsertion", "withFont", "applyFormat",
             "applyLegacyFormat", "applyFormats"
-    }, at = @At("RETURN"))
+    }, at = @At("RETURN"), cancellable = true)
     private void textstudio_font$onStyleTransform(CallbackInfoReturnable<Style> cir) {
         if (this.textstudio_font$styleData != null) {
             Style result = cir.getReturnValue();
             if (result != null && result != (Object)this) {
+                if (result == Style.EMPTY) {
+                    result = StyleConstructionAccess.textstudio_font$newStyle(null, null, null, null, null, null, null, null, null, null);
+                    cir.setReturnValue(result);
+                }
                 ((IStyle) result).textstudio_font$setStyleData(this.textstudio_font$styleData);
             }
         }
     }
 
-    @Inject(method = "applyTo", at = @At("RETURN"))
+    @Inject(method = "applyTo", at = @At("RETURN"), cancellable = true)
     private void textstudio_font$onApplyTo(Style other, CallbackInfoReturnable<Style> cir) {
         Style result = cir.getReturnValue();
         if (result == null || result == (Object) this) {
@@ -49,6 +53,10 @@ public class StyleMixin implements IStyle {
             data = otherStyle.textstudio_font$getStyleData();
         }
         if (data != null) {
+            if (result == Style.EMPTY) {
+                result = StyleConstructionAccess.textstudio_font$newStyle(null, null, null, null, null, null, null, null, null, null);
+                cir.setReturnValue(result);
+            }
             ((IStyle) result).textstudio_font$setStyleData(data);
         }
     }

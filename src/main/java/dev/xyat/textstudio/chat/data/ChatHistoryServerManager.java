@@ -26,11 +26,16 @@ public class ChatHistoryServerManager extends SavedData {
     private final Map<UUID, PlayerChatData> playerData = new HashMap<>();
 
     public static ChatHistoryServerManager get(MinecraftServer server) {
+        //? if >=1.21 {
+        /*return server.overworld().getDataStorage().computeIfAbsent(
+                new SavedData.Factory<>(ChatHistoryServerManager::new, (tag, registries) -> load(tag)), DATA_NAME);
+        *///?} else {
         return server.overworld().getDataStorage().computeIfAbsent(
                 ChatHistoryServerManager::load,
                 ChatHistoryServerManager::new,
                 DATA_NAME
         );
+        //?}
     }
 
     public static void addChatLine(
@@ -203,7 +208,11 @@ public class ChatHistoryServerManager extends SavedData {
     }
 
     @Override
+    //? if >=1.21 {
+    /*public @NotNull CompoundTag save(@NotNull CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+    *///?} else {
     public @NotNull CompoundTag save(@NotNull CompoundTag tag) {
+    //?}
         CompoundTag playersTag = new CompoundTag();
         int maxEntries = ChatSyncCodec.clampHistoryLines(ChatConfig.maxChatHistoryLines);
         for (Map.Entry<UUID, PlayerChatData> entry : playerData.entrySet()) {

@@ -8,6 +8,7 @@
     "PlayerListTweaks",
     "AuthorCoreMixins",
     "StyleMixin",
+    "StyleConstructionAccess",
     "StyleSerializerMixin",
     "AnvilMenuTextLengthMixin"
   ],
