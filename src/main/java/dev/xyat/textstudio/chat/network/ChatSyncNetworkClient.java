@@ -36,11 +36,7 @@ public final class ChatSyncNetworkClient {
                         ChatSyncCodec.clampHistoryLines(ChatConfig.maxChatHistoryLines)
                 );
                 for (ChatSyncCodec.ChatLine line : history) {
-                    //? if >=1.21 {
-                    /*Component component = Component.Serializer.fromJson(line.json(), dev.xyat.kineticcore.api.runtime.KineticClientRuntime.localPlayer().registryAccess());
-                    *///?} else {
-                    Component component = Component.Serializer.fromJson(line.json());
-                    //?}
+                    Component component = dev.xyat.textstudio.chat.client.ChatJson.fromJson(line.json());
                     if (component != null) {
                         syncable.textstudio_chat$setProvidedTimestamp(line.timestamp());
                         syncable.textstudio_chat$setCapturedSender(line.senderUuid());

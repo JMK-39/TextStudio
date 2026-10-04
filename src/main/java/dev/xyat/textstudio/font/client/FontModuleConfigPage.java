@@ -70,6 +70,8 @@ public final class FontModuleConfigPage extends KineticPage {
     private static final int FIELD_COL_2_X = 307;
     private static final int FIELD_COL_3_X = 468;
     private static final int FIELD_CONTROL_OFFSET = 105;
+    // Labels end 4px before their control.
+    private static final int FIELD_LABEL_W = FIELD_CONTROL_OFFSET - 4;
     private static final int FIELD_CONTROL_W = 40;
     private static final int FIELD_H = 14;
     private static final int FIELD_ROW = 18;
@@ -104,7 +106,8 @@ public final class FontModuleConfigPage extends KineticPage {
         PALETTE
     }
 
-    private record FieldLabel(Component component, int x, int y) {
+    // maxWidth is the room before the next control; longer (usually English) labels scroll instead of overlapping it.
+    private record FieldLabel(Component component, int x, int y, int maxWidth) {
     }
 
     private record HoverTip(int x, int y, int w, int h, Component text) {
@@ -505,7 +508,7 @@ public final class FontModuleConfigPage extends KineticPage {
                 this::openPaletteEditor,
                 KineticI18n.translatable("gui.textstudio.font.editor.tip.palette_open")
         );
-        fieldLabels.add(new FieldLabel(KineticI18n.translatable("gui.textstudio.font.editor.palette.current"), PALETTE_SWATCH_X, PALETTE_SWATCH_Y - 17));
+        fieldLabels.add(new FieldLabel(KineticI18n.translatable("gui.textstudio.font.editor.palette.current"), PALETTE_SWATCH_X, PALETTE_SWATCH_Y - 17, 225));
         registerTip(
                 PALETTE_SWATCH_X,
                 PALETTE_SWATCH_Y,
@@ -532,7 +535,7 @@ public final class FontModuleConfigPage extends KineticPage {
 
     private void addToggle(String key, int x, int y, BooleanSupplier getter, Consumer<Boolean> setter) {
         Component label = KineticI18n.translatable(key);
-        fieldLabels.add(new FieldLabel(label, x, y + 3));
+        fieldLabels.add(new FieldLabel(label, x, y + 3, FIELD_LABEL_W));
         boolean value = getter.getAsBoolean();
         ui().button(x + FIELD_CONTROL_OFFSET, y, FIELD_CONTROL_W)
                 .text(KineticI18n.translatable(value ? "gui.textstudio.font.editor.state.on" : "gui.textstudio.font.editor.state.off"))
@@ -553,7 +556,7 @@ public final class FontModuleConfigPage extends KineticPage {
 
     private void addNumber(String key, int x, int y, DoubleSupplier getter, DoubleConsumer setter, double min, double max) {
         Component label = KineticI18n.translatable(key);
-        fieldLabels.add(new FieldLabel(label, x, y + 3));
+        fieldLabels.add(new FieldLabel(label, x, y + 3, FIELD_LABEL_W));
         KineticNumberField box = ui().numberField(x + FIELD_CONTROL_OFFSET, y, FIELD_CONTROL_W, NumberType.DECIMAL)
                 .label(label)
                 .allowNegative(false)
@@ -693,8 +696,8 @@ public final class FontModuleConfigPage extends KineticPage {
 
     @Override
     protected void renderForeground(KineticGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        graphics.text(KineticI18n.translatable("gui.textstudio.font.editor.presets"), LIST_X + 9, LIST_Y + 8, 0xFFFFFF, false);
-        graphics.text(KineticI18n.translatable("gui.textstudio.font.editor.preview.title"), PREVIEW_X + 12, PREVIEW_Y + 8, 0xFFFFFF, false);
+        graphics.scrollingText(KineticI18n.translatable("gui.textstudio.font.editor.presets"), LIST_X + 9, LIST_Y + 8, LIST_W - 18, 0xFFFFFF, false);
+        graphics.scrollingText(KineticI18n.translatable("gui.textstudio.font.editor.preview.title"), PREVIEW_X + 12, PREVIEW_Y + 8, 80, 0xFFFFFF, false);
         graphics.text(
                 KineticI18n.translatable("gui.textstudio.font.editor.preset_selected", selectedPreset + 1),
                 PREVIEW_X + 96,
@@ -704,7 +707,7 @@ public final class FontModuleConfigPage extends KineticPage {
         );
 
         for (FieldLabel label : fieldLabels) {
-            graphics.text(label.component(), label.x(), label.y(), 0xFFFFFF, false);
+            graphics.scrollingText(label.component(), label.x(), label.y(), label.maxWidth(), 0xFFFFFF, false);
         }
 
         if (!categoryMenuOpen && tab == EditorTab.PALETTE) {
@@ -777,7 +780,7 @@ public final class FontModuleConfigPage extends KineticPage {
                 false
         );
         data.customConfig = effect;
-        if (previewStyle instanceof IStyle effectStyle) {
+        if ((Object) previewStyle instanceof IStyle effectStyle) {
             effectStyle.textstudio_font$setStyleData(data);
         }
 
@@ -807,7 +810,7 @@ public final class FontModuleConfigPage extends KineticPage {
     private void renderPalette(KineticGraphics graphics) {
         List<Integer> colors = parsePalette(current().paletteColors);
         if (colors.isEmpty()) {
-            graphics.text(KineticI18n.translatable("gui.textstudio.font.editor.palette.empty_short"), PALETTE_SWATCH_X, PALETTE_SWATCH_Y + 3, 0xFFFFFF, false);
+            graphics.scrollingText(KineticI18n.translatable("gui.textstudio.font.editor.palette.empty_short"), PALETTE_SWATCH_X, PALETTE_SWATCH_Y + 3, 225, 0xFFFFFF, false);
             return;
         }
         for (int i = 0; i < colors.size(); i++) {
@@ -1058,7 +1061,7 @@ public final class FontModuleConfigPage extends KineticPage {
         @Override
         protected void renderRow(KineticGraphics graphics, AuthorConfig.EffectSettings effect, int index, int x, int y,
                                  int width, int height, boolean hovered, boolean selected) {
-            graphics.text(KineticI18n.translatable("gui.textstudio.font.editor.preset", index + 1), x + 4, y + 5, 0xFFFFFF, false);
+            graphics.scrollingText(KineticI18n.translatable("gui.textstudio.font.editor.preset", index + 1), x + 4, y + 5, 66, 0xFFFFFF, false);
             renderPresetSwatches(graphics, effect, x + 71, y + 5);
         }
 

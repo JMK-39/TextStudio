@@ -75,6 +75,36 @@ public abstract class AuthorCoreMixins implements IAuthorName {
         }
     }
 
+    // 26.1 saves entities through ValueOutput/ValueInput; the stored keys are the same.
+    //? if >=26.1 {
+    /*@Inject(method = "addAdditionalSaveData", at = @At("TAIL"))
+    private void textstudio_font$saveNameData(net.minecraft.world.level.storage.ValueOutput output, CallbackInfo ci) {
+        net.minecraft.world.level.storage.ValueOutput ktTag = output.child("kf");
+        ktTag.putInt("e", textstudio_font$getNameEffect());
+        ktTag.putInt("f", textstudio_font$getStyleFlags());
+        if (textstudio_font$diyname != null) ktTag.putString("n", textstudio_font$diyname);
+        ktTag.store("o", net.minecraft.core.UUIDUtil.CODEC, textstudio_font$asPlayer().getUUID());
+    }
+
+    @Inject(method = "readAdditionalSaveData", at = @At("TAIL"))
+    private void textstudio_font$loadNameData(net.minecraft.world.level.storage.ValueInput input, CallbackInfo ci) {
+        java.util.Optional<net.minecraft.world.level.storage.ValueInput> stored = input.child("kf");
+        if (stored.isEmpty()) return;
+        net.minecraft.world.level.storage.ValueInput ktTag = stored.get();
+        Player player = textstudio_font$asPlayer();
+        java.util.Optional<java.util.UUID> owner = ktTag.read("o", net.minecraft.core.UUIDUtil.CODEC);
+        if (owner.isPresent() && !owner.get().equals(player.getUUID())) {
+            this.textstudio_font$diyname = null;
+            this.textstudio_font$nameEffect = 0;
+            this.textstudio_font$styleFlags = -1;
+            return;
+        }
+        int loadedEffect = ktTag.getIntOr("e", 0);
+        int loadedFlags = ktTag.getIntOr("f", -1);
+        String loadedName = ktTag.getString("n").orElse(null);
+        textstudio_font$applyLoadedName(player, loadedEffect, loadedFlags, loadedName);
+    }
+    *///?} else {
     @Inject(method = "addAdditionalSaveData", at = @At("TAIL"))
     private void textstudio_font$saveNameData(CompoundTag tag, CallbackInfo ci) {
         CompoundTag ktTag = new CompoundTag();
@@ -99,6 +129,12 @@ public abstract class AuthorCoreMixins implements IAuthorName {
         int loadedEffect = ktTag.contains("e") ? ktTag.getInt("e") : 0;
         int loadedFlags = ktTag.contains("f") ? ktTag.getInt("f") : -1;
         String loadedName = ktTag.contains("n") ? ktTag.getString("n") : null;
+        textstudio_font$applyLoadedName(player, loadedEffect, loadedFlags, loadedName);
+    }
+    //?}
+
+    @Unique
+    private void textstudio_font$applyLoadedName(Player player, int loadedEffect, int loadedFlags, String loadedName) {
         if (AuthorAPI.AUTHOR_1.equals(player.getUUID()) && loadedEffect == 11 && loadedFlags == (AuthorAPI.FLAG_RAINBOW | AuthorAPI.FLAG_BOLD | AuthorAPI.FLAG_JITTER) && (loadedName == null || "星野爱桃".equals(loadedName))) {
             loadedEffect = 0;
             loadedFlags = -1;

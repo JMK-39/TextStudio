@@ -55,7 +55,7 @@ public final class InlineComponentParser {
         @Override
         public boolean accept(int index, @Nonnull Style style, int codePoint) {
             entries.add(new Entry(style, codePoint));
-            if (style instanceof IStyle effectStyle && effectStyle.textstudio_font$getStyleData() != null) {
+            if ((Object) style instanceof IStyle effectStyle && effectStyle.textstudio_font$getStyleData() != null) {
                 hasTextEffect = true;
             }
             return true;

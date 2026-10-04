@@ -11,6 +11,67 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+//? if >=26.1 {
+/*// 26.1 still draws world text (name tags, signs, ...) through drawInBatch, now without a result and with a Matrix4fc;
+// GUI text goes through GuiRenderState.addText, see GuiGraphicsMixin.
+@Mixin(value = Font.class, priority = 500)
+public abstract class CompatibleFontMixin {
+    @Inject(
+            method = "drawInBatch(Ljava/lang/String;FFIZLorg/joml/Matrix4fc;Lnet/minecraft/client/renderer/MultiBufferSource;Lnet/minecraft/client/gui/Font$DisplayMode;II)V",
+            at = @At("HEAD"),
+            cancellable = true
+    )
+    private void textstudio_font$string(String text, float x, float y, int color, boolean shadow, org.joml.Matrix4fc matrix,
+                                        MultiBufferSource buffers, Font.DisplayMode mode, int backgroundColor, int packedLight,
+                                        org.spongepowered.asm.mixin.injection.callback.CallbackInfo ci) {
+        if (CompatibleFontRenderer.tryRenderString((Font) (Object) this, text, x, y, color, shadow, matrix, buffers, mode, backgroundColor, packedLight) != null) {
+            ci.cancel();
+        }
+    }
+
+    @Inject(
+            method = "drawInBatch(Lnet/minecraft/network/chat/Component;FFIZLorg/joml/Matrix4fc;Lnet/minecraft/client/renderer/MultiBufferSource;Lnet/minecraft/client/gui/Font$DisplayMode;II)V",
+            at = @At("HEAD"),
+            cancellable = true
+    )
+    private void textstudio_font$component(Component component, float x, float y, int color, boolean shadow, org.joml.Matrix4fc matrix,
+                                           MultiBufferSource buffers, Font.DisplayMode mode, int backgroundColor, int packedLight,
+                                           org.spongepowered.asm.mixin.injection.callback.CallbackInfo ci) {
+        if (CompatibleFontRenderer.tryRenderComponent((Font) (Object) this, component, x, y, color, shadow, matrix, buffers, mode, backgroundColor, packedLight) != null) {
+            ci.cancel();
+        }
+    }
+
+    @Inject(
+            method = "drawInBatch(Lnet/minecraft/util/FormattedCharSequence;FFIZLorg/joml/Matrix4fc;Lnet/minecraft/client/renderer/MultiBufferSource;Lnet/minecraft/client/gui/Font$DisplayMode;II)V",
+            at = @At("HEAD"),
+            cancellable = true
+    )
+    private void textstudio_font$sequence(FormattedCharSequence sequence, float x, float y, int color, boolean shadow, org.joml.Matrix4fc matrix,
+                                          MultiBufferSource buffers, Font.DisplayMode mode, int backgroundColor, int packedLight,
+                                          org.spongepowered.asm.mixin.injection.callback.CallbackInfo ci) {
+        if (CompatibleFontRenderer.tryRenderSequence((Font) (Object) this, sequence, x, y, color, shadow, matrix, buffers, mode, backgroundColor, packedLight) != null) {
+            ci.cancel();
+        }
+    }
+
+    @Inject(method = "width(Ljava/lang/String;)I", at = @At("HEAD"), cancellable = true)
+    private void textstudio_font$widthString(String text, CallbackInfoReturnable<Integer> cir) {
+        Integer result = CompatibleFontRenderer.tryMeasureString((Font) (Object) this, text);
+        if (result != null) {
+            cir.setReturnValue(result);
+        }
+    }
+
+    @Inject(method = "width(Lnet/minecraft/util/FormattedCharSequence;)I", at = @At("HEAD"), cancellable = true)
+    private void textstudio_font$widthSequence(FormattedCharSequence sequence, CallbackInfoReturnable<Integer> cir) {
+        Integer result = CompatibleFontRenderer.tryMeasureSequence((Font) (Object) this, sequence);
+        if (result != null) {
+            cir.setReturnValue(result);
+        }
+    }
+}
+*///?} else {
 @Mixin(value = Font.class, priority = 500)
 public abstract class CompatibleFontMixin {
     @Inject(
@@ -182,3 +243,4 @@ public abstract class CompatibleFontMixin {
     }
 
 }
+//?}

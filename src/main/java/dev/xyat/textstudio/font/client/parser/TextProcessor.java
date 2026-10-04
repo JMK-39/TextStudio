@@ -83,7 +83,7 @@ public final class TextProcessor {
 
     private static Style clearTextEffectStyle(Style current) {
         Style style = current.applyFormat(ChatFormatting.WHITE);
-        ((IStyle) style).textstudio_font$setStyleData(null);
+        ((IStyle) (Object) style).textstudio_font$setStyleData(null);
         return style;
     }
 
@@ -92,7 +92,7 @@ public final class TextProcessor {
         IStyle.TextEffectStyleData data = new IStyle.TextEffectStyleData(
                 presetId, false, false, false, false, false, advancedAllowed
         );
-        ((IStyle) style).textstudio_font$setStyleData(data);
+        ((IStyle) (Object) style).textstudio_font$setStyleData(data);
         return style;
     }
 
@@ -102,12 +102,12 @@ public final class TextProcessor {
                 1, false, false, false, false, false, advancedAllowed
         );
         data.customConfig = advancedAllowed ? settings : AuthorConfig.toPublicSafeSettings(settings);
-        ((IStyle) style).textstudio_font$setStyleData(data);
+        ((IStyle) (Object) style).textstudio_font$setStyleData(data);
         return style;
     }
 
     private static boolean advancedAllowed(Style style) {
-        if (style instanceof IStyle effectStyle) {
+        if ((Object) style instanceof IStyle effectStyle) {
             IStyle.TextEffectStyleData data = effectStyle.textstudio_font$getStyleData();
             if (data != null) {
                 return data.advancedAllowed;

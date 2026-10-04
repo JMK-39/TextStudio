@@ -37,7 +37,7 @@ public class StyleMixin implements IStyle {
                     result = StyleConstructionAccess.textstudio_font$newStyle(null, null, null, null, null, null, null, null, null, null);
                     cir.setReturnValue(result);
                 }
-                ((IStyle) result).textstudio_font$setStyleData(this.textstudio_font$styleData);
+                ((IStyle) (Object) result).textstudio_font$setStyleData(this.textstudio_font$styleData);
             }
         }
     }
@@ -49,7 +49,7 @@ public class StyleMixin implements IStyle {
             return;
         }
         TextEffectStyleData data = this.textstudio_font$styleData;
-        if (data == null && other instanceof IStyle otherStyle) {
+        if (data == null && (Object) other instanceof IStyle otherStyle) {
             data = otherStyle.textstudio_font$getStyleData();
         }
         if (data != null) {
@@ -57,7 +57,7 @@ public class StyleMixin implements IStyle {
                 result = StyleConstructionAccess.textstudio_font$newStyle(null, null, null, null, null, null, null, null, null, null);
                 cir.setReturnValue(result);
             }
-            ((IStyle) result).textstudio_font$setStyleData(data);
+            ((IStyle) (Object) result).textstudio_font$setStyleData(data);
         }
     }
 }

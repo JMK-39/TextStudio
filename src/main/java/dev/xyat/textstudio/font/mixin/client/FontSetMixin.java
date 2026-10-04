@@ -2,9 +2,9 @@ package dev.xyat.textstudio.font.mixin.client;
 
 import com.mojang.blaze3d.font.GlyphInfo;
 import dev.xyat.textstudio.font.client.render.InvisibleMarkers;
+//? if <26.1
 import net.minecraft.client.gui.font.FontSet;
 import net.minecraft.client.gui.font.glyphs.BakedGlyph;
-import net.minecraft.client.gui.font.glyphs.EmptyGlyph;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -14,6 +14,26 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * 前缀码的控制字符在字形层彻底隐形：零宽度、不画任何东西（见 {@link InvisibleMarkers}）。
  * 量宽、拆行、绘制都经过这里，所以无论前缀码有没有被解析、有没有被拆开，都不会显示出来或占位。
  */
+//? if >=26.1 {
+/*// 26.1 looks glyphs up through FontSet.Source, which measuring, splitting and drawing all share.
+@Mixin(targets = "net.minecraft.client.gui.font.FontSet$Source", priority = 500)
+public abstract class FontSetMixin {
+    @Inject(method = "getGlyph(I)Lnet/minecraft/client/gui/font/glyphs/BakedGlyph;", at = @At("HEAD"), cancellable = true)
+    private void textstudio_font$markerGlyph(int codePoint, CallbackInfoReturnable<BakedGlyph> cir) {
+        if (InvisibleMarkers.is(codePoint)) {
+            cir.setReturnValue(InvisibleMarkers.GLYPH);
+        }
+    }
+
+    /^* 乱码样式（§k）按宽度随机取字形；零宽度的标记保持为空字形 / Obfuscated text picks glyphs by width; zero-width markers stay empty. ^/
+    @Inject(method = "getRandomGlyph(Lnet/minecraft/util/RandomSource;I)Lnet/minecraft/client/gui/font/glyphs/BakedGlyph;", at = @At("HEAD"), cancellable = true)
+    private void textstudio_font$markerRandom(net.minecraft.util.RandomSource random, int width, CallbackInfoReturnable<BakedGlyph> cir) {
+        if (width == 0) {
+            cir.setReturnValue(InvisibleMarkers.GLYPH);
+        }
+    }
+}
+*///?} else {
 @Mixin(value = FontSet.class, priority = 500)
 public abstract class FontSetMixin {
     @Inject(
@@ -34,7 +54,7 @@ public abstract class FontSetMixin {
     )
     private void textstudio_font$markerGlyph(int codePoint, CallbackInfoReturnable<BakedGlyph> cir) {
         if (InvisibleMarkers.is(codePoint)) {
-            cir.setReturnValue(EmptyGlyph.INSTANCE);
+            cir.setReturnValue(InvisibleMarkers.GLYPH);
         }
     }
 
@@ -46,7 +66,8 @@ public abstract class FontSetMixin {
     )
     private void textstudio_font$markerRandom(GlyphInfo info, CallbackInfoReturnable<BakedGlyph> cir) {
         if (info == InvisibleMarkers.INFO) {
-            cir.setReturnValue(EmptyGlyph.INSTANCE);
+            cir.setReturnValue(InvisibleMarkers.GLYPH);
         }
     }
 }
+//?}

@@ -1,11 +1,13 @@
 package dev.xyat.textstudio.font.client.render;
 
 import com.mojang.blaze3d.font.GlyphInfo;
-import com.mojang.blaze3d.font.SheetGlyphInfo;
 import net.minecraft.client.gui.font.glyphs.BakedGlyph;
+//? if <26.1 {
+import com.mojang.blaze3d.font.SheetGlyphInfo;
 import net.minecraft.client.gui.font.glyphs.EmptyGlyph;
 
 import java.util.function.Function;
+//?}
 
 /**
  * 文本样式前缀码用到的控制字符：{@code U+2061..U+2064}（起止与停止标记）和 {@code U+FE00..U+FE0F}（半字节载荷）。
@@ -38,11 +40,31 @@ public final class InvisibleMarkers {
             return 0.0F;
         }
 
+        //? if <26.1 {
         @Override
         public BakedGlyph bake(Function<SheetGlyphInfo, BakedGlyph> baker) {
             return EmptyGlyph.INSTANCE;
         }
+        //?}
     };
+
+    //? if >=26.1 {
+    /*/^* 26.1 的字形：零宽度，不生成任何可绘制内容 / The 26.1 glyph: zero width, nothing to draw. ^/
+    public static final BakedGlyph GLYPH = new BakedGlyph() {
+        @Override
+        public GlyphInfo info() {
+            return INFO;
+        }
+
+        @Override
+        public net.minecraft.client.gui.font.TextRenderable.Styled createGlyph(float x, float y, int color, int shadowColor,
+                net.minecraft.network.chat.Style style, float boldOffset, float shadowOffset) {
+            return null;
+        }
+    };
+    *///?} else {
+    public static final BakedGlyph GLYPH = EmptyGlyph.INSTANCE;
+    //?}
 
     private InvisibleMarkers() {
     }

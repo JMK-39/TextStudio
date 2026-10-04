@@ -4,9 +4,13 @@ import dev.xyat.textstudio.font.api.AuthorAPI;
 import dev.xyat.kineticcore.api.client.gui.KineticGui;
 import dev.xyat.textstudio.font.client.FontModuleConfigPage;
 import dev.xyat.textstudio.font.client.FontModuleGuidePage;
+//? if <26.1 {
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
+//?}
 
+// 26.1 no longer strips @OnlyIn members; this class is only reached from client packet handling.
+//? if <26.1
 @OnlyIn(Dist.CLIENT)
 public class AuthorNetworkClient {
     public static void handleSync(AuthorNetwork.SyncName packet) {

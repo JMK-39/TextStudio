@@ -2,6 +2,7 @@ package dev.xyat.textstudio.font.mixin.client;
 
 import dev.xyat.textstudio.font.client.render.CompatibleFontRenderer;
 import net.minecraft.client.gui.Font;
+//? if <26.1
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
@@ -10,6 +11,22 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+//? if >=26.1 {
+/*// 26.1 queues all GUI text, from text(), chat, widgets and tooltips alike, through GuiRenderState.addText; effect
+// text is replaced there by one text state per glyph pass.
+@Mixin(value = net.minecraft.client.renderer.state.gui.GuiRenderState.class, priority = 100)
+public abstract class GuiGraphicsMixin {
+    @Inject(method = "addText", at = @At("HEAD"), cancellable = true)
+    private void textstudio_font$effectText(net.minecraft.client.renderer.state.gui.GuiTextRenderState state,
+                                            org.spongepowered.asm.mixin.injection.callback.CallbackInfo ci) {
+        Integer result = CompatibleFontRenderer.tryRenderSequence(state.font, state.text, state.x, state.y, state.color, state.dropShadow,
+                dev.xyat.textstudio.font.client.render.GuiGlyphOut.of((net.minecraft.client.renderer.state.gui.GuiRenderState) (Object) this, state));
+        if (result != null) {
+            ci.cancel();
+        }
+    }
+}
+*///?} else {
 @Mixin(value = GuiGraphics.class, priority = 100)
 public abstract class GuiGraphicsMixin {
     @Inject(
@@ -114,3 +131,4 @@ public abstract class GuiGraphicsMixin {
         }
     }
 }
+//?}

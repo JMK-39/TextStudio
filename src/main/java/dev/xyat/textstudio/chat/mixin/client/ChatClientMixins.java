@@ -55,13 +55,28 @@ public class ChatClientMixins {
         @Unique private static final DateTimeFormatter textstudio_chat$TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
         @Unique private UUID textstudio_chat$lastSenderUUID = null;
 
-        //? if >=1.21 {
+        //? if >=1.21 <26.1 {
         /*// In 1.21.1 these two depth-100 fills belong only to the vanilla scrollbar.
         @Redirect(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphics;fill(IIIIII)V"), require = 2)
         private void textstudio_chat$renderVanillaScrollbar(GuiGraphics graphics, int x1, int y1, int x2, int y2, int depth, int color) {
             if (!dev.xyat.textstudio.chat.client.ChatScreenControls.replacesVanillaScrollbar()) {
                 graphics.fill(x1, y1, x2, y2, depth, color);
             }
+        }
+        *///?}
+        //? if >=26.1 {
+        /*// 26.1 draws the vanilla scrollbar with the third and fourth fill of the private extractRenderState; the line
+        // backgrounds are filled inside a lambda, so they are not counted here.
+        @Redirect(method = "extractRenderState(Lnet/minecraft/client/gui/components/ChatComponent$ChatGraphicsAccess;IILnet/minecraft/client/gui/components/ChatComponent$DisplayMode;)V",
+                at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/components/ChatComponent$ChatGraphicsAccess;fill(IIIII)V", ordinal = 2))
+        private void textstudio_chat$renderVanillaScrollbarThumb(ChatComponent.ChatGraphicsAccess graphics, int x1, int y1, int x2, int y2, int color) {
+            if (!dev.xyat.textstudio.chat.client.ChatScreenControls.replacesVanillaScrollbar()) graphics.fill(x1, y1, x2, y2, color);
+        }
+
+        @Redirect(method = "extractRenderState(Lnet/minecraft/client/gui/components/ChatComponent$ChatGraphicsAccess;IILnet/minecraft/client/gui/components/ChatComponent$DisplayMode;)V",
+                at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/components/ChatComponent$ChatGraphicsAccess;fill(IIIII)V", ordinal = 3))
+        private void textstudio_chat$renderVanillaScrollbarEdge(ChatComponent.ChatGraphicsAccess graphics, int x1, int y1, int x2, int y2, int color) {
+            if (!dev.xyat.textstudio.chat.client.ChatScreenControls.replacesVanillaScrollbar()) graphics.fill(x1, y1, x2, y2, color);
         }
         *///?}
 
@@ -74,6 +89,15 @@ public class ChatClientMixins {
         @Unique private int textstudio_chat$lastTimestampWidth = 0;
 
         @Unique private GuiMessage.Line textstudio_chat$currentRenderingLine = null;
+        // Line content to line, so 26.1 chat drawing, which only sees the content, can find the head.
+        @Unique private final Map<net.minecraft.util.FormattedCharSequence, GuiMessage.Line> textstudio_chat$contentToLineMap = new WeakHashMap<>();
+
+        @Override
+        public dev.xyat.textstudio.chat.client.IChatComponentSync.ChatHead textstudio_chat$headFor(net.minecraft.util.FormattedCharSequence lineContent) {
+            GuiMessage.Line line = textstudio_chat$contentToLineMap.get(lineContent);
+            UUID uuid = line == null ? null : textstudio_chat$lineToUuidMap.get(line);
+            return uuid == null ? null : new dev.xyat.textstudio.chat.client.IChatComponentSync.ChatHead(uuid, textstudio_chat$lineToTsWidthMap.getOrDefault(line, 0));
+        }
 
         @Override public void textstudio_chat$setSyncing(boolean syncing) { this.textstudio_chat$isSyncing = syncing; }
         @Override public void textstudio_chat$setProvidedTimestamp(long timestamp) { this.textstudio_chat$providedTimestamp = timestamp; }
@@ -98,8 +122,15 @@ public class ChatClientMixins {
             }
         }
 
+        //? if >=26.1 {
+        /*@Inject(method = "addMessage(Lnet/minecraft/network/chat/Component;Lnet/minecraft/network/chat/MessageSignature;Lnet/minecraft/client/multiplayer/chat/GuiMessageSource;Lnet/minecraft/client/multiplayer/chat/GuiMessageTag;)V", at = @At("HEAD"))
+        *///?} else {
         @Inject(method = "addMessage(Lnet/minecraft/network/chat/Component;Lnet/minecraft/network/chat/MessageSignature;ILnet/minecraft/client/GuiMessageTag;Z)V", at = @At("HEAD"))
-        //? if >=1.21 {
+        //?}
+        //? if >=26.1 {
+        /*private void textstudio_chat$onAddMessageHead(Component component, MessageSignature signature, net.minecraft.client.multiplayer.chat.GuiMessageSource source, GuiMessageTag tag, CallbackInfo ci) {
+            boolean refresh = false;
+        *///?} else if >=1.21 {
         /*private void textstudio_chat$onAddMessageHead(Component component, MessageSignature signature, GuiMessageTag tag, CallbackInfo ci) {
             boolean refresh = false;
         *///?} else {
@@ -120,7 +151,11 @@ public class ChatClientMixins {
             }
         }
 
+        //? if >=26.1 {
+        /*@ModifyVariable(method = "addMessage(Lnet/minecraft/network/chat/Component;Lnet/minecraft/network/chat/MessageSignature;Lnet/minecraft/client/multiplayer/chat/GuiMessageSource;Lnet/minecraft/client/multiplayer/chat/GuiMessageTag;)V", at = @At("HEAD"), argsOnly = true, ordinal = 0)
+        *///?} else {
         @ModifyVariable(method = "addMessage(Lnet/minecraft/network/chat/Component;Lnet/minecraft/network/chat/MessageSignature;ILnet/minecraft/client/GuiMessageTag;Z)V", at = @At("HEAD"), argsOnly = true, ordinal = 0)
+        //?}
         private Component textstudio_chat$applyVisualDecorations(Component component) {
             if (this.textstudio_chat$isRefreshing) return component;
             MutableComponent root = Component.empty();
@@ -151,8 +186,15 @@ public class ChatClientMixins {
             return root;
         }
 
+        //? if >=26.1 {
+        /*@Inject(method = "addMessage(Lnet/minecraft/network/chat/Component;Lnet/minecraft/network/chat/MessageSignature;Lnet/minecraft/client/multiplayer/chat/GuiMessageSource;Lnet/minecraft/client/multiplayer/chat/GuiMessageTag;)V", at = @At("RETURN"))
+        *///?} else {
         @Inject(method = "addMessage(Lnet/minecraft/network/chat/Component;Lnet/minecraft/network/chat/MessageSignature;ILnet/minecraft/client/GuiMessageTag;Z)V", at = @At("RETURN"))
-        //? if >=1.21 {
+        //?}
+        //? if >=26.1 {
+        /*private void textstudio_chat$onAddMessageReturn(Component component, MessageSignature signature, net.minecraft.client.multiplayer.chat.GuiMessageSource source, GuiMessageTag guiTag, CallbackInfo ci) {
+            boolean refresh = false;
+        *///?} else if >=1.21 {
         /*private void textstudio_chat$onAddMessageReturn(Component component, MessageSignature signature, GuiMessageTag guiTag, CallbackInfo ci) {
             boolean refresh = false;
         *///?} else {
@@ -187,6 +229,7 @@ public class ChatClientMixins {
 
                     GuiMessage.Line firstLine = trimmed.get(topIndex);
                     textstudio_chat$lineToUuidMap.put(firstLine, messageUuid);
+                    textstudio_chat$contentToLineMap.put(firstLine.content(), firstLine);
                     textstudio_chat$lineToTsWidthMap.put(firstLine, tsWidth);
                 }
             }
@@ -199,11 +242,7 @@ public class ChatClientMixins {
                     ChatSyncNetwork.sendToServer(
                             ChatSyncCodec.TYPE_CHAT_LINE,
                             ChatSyncCodec.encodeChatLine(
-                                    //? if >=1.21 {
-                                    /*Component.Serializer.toJson(this.textstudio_chat$capturedOriginal, KineticClientRuntime.localPlayer().registryAccess()),
-                                    *///?} else {
-                                    Component.Serializer.toJson(this.textstudio_chat$capturedOriginal),
-                                    //?}
+                                    dev.xyat.textstudio.chat.client.ChatJson.toJson(this.textstudio_chat$capturedOriginal),
                                     System.currentTimeMillis(),
                                     textstudio_chat$lastSenderUUID,
                                     ChatConfig.maxChatLength
@@ -224,10 +263,13 @@ public class ChatClientMixins {
             int first = 0;
             for (int i = 1; i < lines.size() && !lines.get(i).endOfEntry(); i++) first = i;
             textstudio_chat$lineToUuidMap.put(lines.get(first), uuid);
+            textstudio_chat$contentToLineMap.put(lines.get(first).content(), lines.get(first));
             textstudio_chat$lineToTsWidthMap.put(lines.get(first), textstudio_chat$componentToTsWidthMap.getOrDefault(message.content(), 0));
         }
         *///?}
 
+        // 26.1 draws chat lines through ChatGraphicsAccess, see ChatLineHeadTweaks.
+        //? if <26.1 {
         @ModifyVariable(method = "render", at = @At(value = "STORE"), ordinal = 0)
         private GuiMessage.Line textstudio_chat$captureRenderingLine(GuiMessage.Line line) {
             this.textstudio_chat$currentRenderingLine = line;
@@ -256,14 +298,10 @@ public class ChatClientMixins {
             }
             return result;
         }
+        //?}
 
         @Unique private ResourceLocation textstudio_chat$getSkin(UUID uuid) {
-            PlayerInfo info = MinecraftPlayers.playerInfo(uuid);
-            //? if >=1.21 {
-            /*return info != null ? info.getSkin().texture() : DefaultPlayerSkin.get(uuid).texture();
-            *///?} else {
-            return info != null ? info.getSkinLocation() : DefaultPlayerSkin.getDefaultSkin(uuid);
-            //?}
+            return dev.xyat.textstudio.chat.client.ChatHeads.skin(uuid);
         }
 
         @Inject(method = "clearMessages", at = @At("HEAD"))
@@ -271,9 +309,35 @@ public class ChatClientMixins {
             textstudio_chat$lineToUuidMap.clear();
             textstudio_chat$componentToUuidMap.clear();
             textstudio_chat$lineToTsWidthMap.clear();
+            textstudio_chat$contentToLineMap.clear();
             textstudio_chat$componentToTsWidthMap.clear();
         }
     }
+
+    //? if >=26.1 {
+    /*// 26.1 draws chat lines through two ChatGraphicsAccess implementations; the head goes after the timestamp of a
+    // message's first line, where the message keeps three spaces free for it.
+    @Mixin(targets = {
+            "net.minecraft.client.gui.components.ChatComponent$DrawingBackgroundGraphicsAccess",
+            "net.minecraft.client.gui.components.ChatComponent$DrawingFocusedGraphicsAccess"
+    })
+    public static abstract class ChatLineHeadTweaks {
+        // Multi-target mixins may only use shadows that are not remapped.
+        @Shadow(remap = false) @Final private GuiGraphics graphics;
+
+        @Inject(method = "handleMessage", at = @At("RETURN"))
+        private void textstudio_chat$drawHead(int textTop, float opacity, net.minecraft.util.FormattedCharSequence message, CallbackInfoReturnable<Boolean> cir) {
+            if (!ChatConfig.enableChatHeads) return;
+            IChatComponentSync sync = MinecraftChat.extension(IChatComponentSync.class);
+            IChatComponentSync.ChatHead head = sync == null ? null : sync.textstudio_chat$headFor(message);
+            if (head == null) return;
+            ResourceLocation skin = dev.xyat.textstudio.chat.client.ChatHeads.skin(head.sender());
+            int color = net.minecraft.util.ARGB.color(opacity, 0xFFFFFF);
+            graphics.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, skin, head.timestampWidth(), textTop, 8.0F, 8.0F, 8, 8, 64, 64, color);
+            graphics.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, skin, head.timestampWidth(), textTop, 40.0F, 8.0F, 8, 8, 64, 64, color);
+        }
+    }
+    *///?}
 
     @Mixin(ClientPacketListener.class)
     public static class ClientPacketTweaks {

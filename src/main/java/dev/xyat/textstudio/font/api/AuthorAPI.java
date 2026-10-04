@@ -126,7 +126,7 @@ public class AuthorAPI {
         int safeFlags = advancedAllowed ? flags : flags & PUBLIC_STYLE_FLAGS;
         MutableComponent component = Component.literal(displayName);
         Style style = Style.EMPTY.withColor(TextColor.fromRgb(0xFFFFFF));
-        ((IStyle) style).textstudio_font$setStyleData(new IStyle.TextEffectStyleData(
+        ((IStyle) (Object) style).textstudio_font$setStyleData(new IStyle.TextEffectStyleData(
                 effectId,
                 (safeFlags & FLAG_RAINBOW) != 0,
                 (safeFlags & FLAG_BOLD) != 0,

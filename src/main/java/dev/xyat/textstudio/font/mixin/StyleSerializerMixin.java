@@ -26,14 +26,14 @@ public class StyleSerializerMixin {
     @Inject(method = "<clinit>", at = @At("RETURN"))
     private static void textstudio_font$extendCodec(org.spongepowered.asm.mixin.injection.callback.CallbackInfo ci) {
         MAP_CODEC = dev.xyat.textstudio.font.common.text.PackedStyleCodec.wrap(MAP_CODEC,
-                style -> java.util.Optional.ofNullable(((IStyle) style).textstudio_font$getStyleData())
+                style -> java.util.Optional.ofNullable(((IStyle) (Object) style).textstudio_font$getStyleData())
                         .map(IStyle.TextEffectStyleData::pack),
                 (style, packed) -> {
                     // Style's vanilla codec shares EMPTY. Effects must belong to a distinct instance.
                     Style result = style == Style.EMPTY
                             ? StyleConstructionAccess.textstudio_font$newStyle(null, null, null, null, null, null, null, null, null, null)
                             : style;
-                    ((IStyle) result).textstudio_font$setStyleData(IStyle.TextEffectStyleData.unpack(packed));
+                    ((IStyle) (Object) result).textstudio_font$setStyleData(IStyle.TextEffectStyleData.unpack(packed));
                     return result;
                 });
         CODEC = MAP_CODEC.codec();
@@ -47,7 +47,7 @@ public class StyleSerializerMixin {
             JsonObject json = jsonElement.getAsJsonObject();
             if (json.has("kf")) {
                 int packedData = json.get("kf").getAsInt();
-                ((IStyle) result).textstudio_font$setStyleData(IStyle.TextEffectStyleData.unpack(packedData));
+                ((IStyle) (Object) result).textstudio_font$setStyleData(IStyle.TextEffectStyleData.unpack(packedData));
             }
         }
     }
@@ -56,7 +56,7 @@ public class StyleSerializerMixin {
     private void textstudio_font$serialize(Style style, Type type, JsonSerializationContext ctx, CallbackInfoReturnable<JsonElement> cir) {
         JsonElement result = cir.getReturnValue();
         if (result != null && result.isJsonObject()) {
-            IStyle.TextEffectStyleData data = ((IStyle) style).textstudio_font$getStyleData();
+            IStyle.TextEffectStyleData data = ((IStyle) (Object) style).textstudio_font$getStyleData();
             if (data != null) {
                 result.getAsJsonObject().addProperty("kf", data.pack());
             }

@@ -124,11 +124,11 @@ public final class FontModuleGuidePage extends KineticPage {
 
     @Override
     protected void renderForeground(KineticGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        graphics.text(KineticI18n.translatable("gui.textstudio.font.guide.presets"), LIST_X + 9, LIST_Y + 8, 0xFFFFFF, false);
+        graphics.scrollingText(KineticI18n.translatable("gui.textstudio.font.guide.presets"), LIST_X + 9, LIST_Y + 8, LIST_W - 18, 0xFFFFFF, false);
 
-        graphics.text(KineticI18n.translatable("gui.textstudio.font.guide.quick_use"), INFO_X + 12, INFO_Y + 10, 0xFFFFFF, false);
-        graphics.text(KineticI18n.translatable("gui.textstudio.font.guide.step1"), INFO_X + 12, INFO_Y + 25, 0xFFFFFF, false);
-        graphics.text(KineticI18n.translatable("gui.textstudio.font.guide.step2"), INFO_X + 12, INFO_Y + 37, 0xFFFFFF, false);
+        graphics.scrollingText(KineticI18n.translatable("gui.textstudio.font.guide.quick_use"), INFO_X + 12, INFO_Y + 10, INFO_W - 24, 0xFFFFFF, false);
+        graphics.scrollingText(KineticI18n.translatable("gui.textstudio.font.guide.step1"), INFO_X + 12, INFO_Y + 25, INFO_W - 24, 0xFFFFFF, false);
+        graphics.scrollingText(KineticI18n.translatable("gui.textstudio.font.guide.step2"), INFO_X + 12, INFO_Y + 37, INFO_W - 24, 0xFFFFFF, false);
         graphics.text(
                 KineticI18n.translatable("gui.textstudio.font.guide.selected", selectedPreset + 1, presetName(selectedPreset)),
                 INFO_X + 12,
@@ -208,7 +208,7 @@ public final class FontModuleGuidePage extends KineticPage {
                 false
         );
         data.customConfig = effect;
-        if (style instanceof IStyle effectStyle) {
+        if ((Object) style instanceof IStyle effectStyle) {
             effectStyle.textstudio_font$setStyleData(data);
         }
 
@@ -262,8 +262,7 @@ public final class FontModuleGuidePage extends KineticPage {
 
     private void drawRightAlignedNote(KineticGraphics graphics, String key, int y) {
         Component note = KineticI18n.translatable(key);
-        int x = INFO_X + INFO_W - 12 - graphics.textWidth(note);
-        graphics.text(note, Math.max(INFO_X + 12, x), y, 0xFFFFFF, false);
+        graphics.scrollingTextRight(note, INFO_X + INFO_W - 12, y, INFO_W - 24, 0xFFFFFF, false);
     }
 
     @Override

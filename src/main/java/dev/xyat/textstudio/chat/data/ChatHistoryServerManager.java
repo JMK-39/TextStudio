@@ -26,7 +26,11 @@ public class ChatHistoryServerManager extends SavedData {
     private final Map<UUID, PlayerChatData> playerData = new HashMap<>();
 
     public static ChatHistoryServerManager get(MinecraftServer server) {
-        //? if >=1.21 {
+        //? if >=26.1 {
+        /*return server.overworld().getDataStorage().computeIfAbsent(new net.minecraft.world.level.saveddata.SavedDataType<>(
+                net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("textstudio", DATA_NAME), ChatHistoryServerManager::new,
+                CompoundTag.CODEC.xmap(ChatHistoryServerManager::load, manager -> manager.save(new CompoundTag()))));
+        *///?} else if >=1.21 {
         /*return server.overworld().getDataStorage().computeIfAbsent(
                 new SavedData.Factory<>(ChatHistoryServerManager::new, (tag, registries) -> load(tag)), DATA_NAME);
         *///?} else {
@@ -173,9 +177,9 @@ public class ChatHistoryServerManager extends SavedData {
         int maxChars = ChatSyncCodec.wireStringLimit(ChatConfig.maxChatLength);
         int maxEntries = ChatSyncCodec.clampHistoryLines(ChatConfig.maxChatHistoryLines);
 
-        for (String key : playersTag.getAllKeys()) {
-            CompoundTag playerTag = playersTag.getCompound(key);
-            long lastSeen = playerTag.getLong("LastSeen");
+        for (String key : keys(playersTag)) {
+            CompoundTag playerTag = compound(playersTag, key);
+            long lastSeen = longValue(playerTag, "LastSeen");
             if (now - lastSeen > expireTime && lastSeen != 0) continue;
 
             PlayerChatData data = new PlayerChatData();
@@ -183,11 +187,11 @@ public class ChatHistoryServerManager extends SavedData {
             ListTag chatList = playerTag.getList("ChatLines", Tag.TAG_COMPOUND);
             int firstChat = Math.max(0, chatList.size() - maxEntries);
             for (int i = firstChat; i < chatList.size(); i++) {
-                CompoundTag entry = chatList.getCompound(i);
-                String json = entry.getString("js");
+                CompoundTag entry = compoundAt(chatList, i);
+                String json = stringValue(entry, "js");
                 if (json.length() > maxChars) continue;
-                UUID senderUuid = entry.hasUUID("sender") ? entry.getUUID("sender") : null;
-                ChatEntry chatEntry = new ChatEntry(json, entry.getLong("ts"), senderUuid);
+                UUID senderUuid = uuid(entry, "sender");
+                ChatEntry chatEntry = new ChatEntry(json, longValue(entry, "ts"), senderUuid);
                 int wireBytes = measureWireBytes(chatEntry);
                 if (wireBytes < 0) continue;
                 data.chatLines.add(chatEntry);
@@ -199,7 +203,7 @@ public class ChatHistoryServerManager extends SavedData {
             ListTag inputList = playerTag.getList("InputLines", Tag.TAG_STRING);
             int firstInput = Math.max(0, inputList.size() - ChatSyncCodec.MAX_INPUT_HISTORY_LINES);
             for (int i = firstInput; i < inputList.size(); i++) {
-                String input = inputList.getString(i);
+                String input = stringAt(inputList, i);
                 if (input.length() <= maxChars) data.inputLines.add(input);
             }
             manager.playerData.put(UUID.fromString(key), data);
@@ -207,8 +211,10 @@ public class ChatHistoryServerManager extends SavedData {
         return manager;
     }
 
+    // 26.1 saves through the codec above, so save is a plain method there.
+    //? if <26.1
     @Override
-    //? if >=1.21 {
+    //? if >=1.21 <26.1 {
     /*public @NotNull CompoundTag save(@NotNull CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
     *///?} else {
     public @NotNull CompoundTag save(@NotNull CompoundTag tag) {
@@ -225,7 +231,7 @@ public class ChatHistoryServerManager extends SavedData {
                 CompoundTag chatTag = new CompoundTag();
                 chatTag.putString("js", chatEntry.json());
                 chatTag.putLong("ts", chatEntry.timestamp());
-                if (chatEntry.senderUuid() != null) chatTag.putUUID("sender", chatEntry.senderUuid());
+                if (chatEntry.senderUuid() != null) putUuid(chatTag, "sender", chatEntry.senderUuid());
                 chatList.add(chatTag);
             }
             playerTag.put("ChatLines", chatList);
@@ -240,6 +246,27 @@ public class ChatHistoryServerManager extends SavedData {
         tag.put("Players", playersTag);
         return tag;
     }
+
+    // NBT access: 26.1 getters return Optional and UUIDs go through a codec. The stored format is the same.
+    //? if >=26.1 {
+    /*private static java.util.Set<String> keys(CompoundTag tag) { return tag.keySet(); }
+    private static CompoundTag compound(CompoundTag tag, String key) { return tag.getCompoundOrEmpty(key); }
+    private static long longValue(CompoundTag tag, String key) { return tag.getLongOr(key, 0L); }
+    private static String stringValue(CompoundTag tag, String key) { return tag.getStringOr(key, ""); }
+    private static CompoundTag compoundAt(ListTag list, int index) { return list.getCompoundOrEmpty(index); }
+    private static String stringAt(ListTag list, int index) { return list.getStringOr(index, ""); }
+    private static @Nullable UUID uuid(CompoundTag tag, String key) { return tag.read(key, net.minecraft.core.UUIDUtil.CODEC).orElse(null); }
+    private static void putUuid(CompoundTag tag, String key, UUID value) { tag.store(key, net.minecraft.core.UUIDUtil.CODEC, value); }
+    *///?} else {
+    private static java.util.Set<String> keys(CompoundTag tag) { return tag.getAllKeys(); }
+    private static CompoundTag compound(CompoundTag tag, String key) { return tag.getCompound(key); }
+    private static long longValue(CompoundTag tag, String key) { return tag.getLong(key); }
+    private static String stringValue(CompoundTag tag, String key) { return tag.getString(key); }
+    private static CompoundTag compoundAt(ListTag list, int index) { return list.getCompound(index); }
+    private static String stringAt(ListTag list, int index) { return list.getString(index); }
+    private static @Nullable UUID uuid(CompoundTag tag, String key) { return tag.hasUUID(key) ? tag.getUUID(key) : null; }
+    private static void putUuid(CompoundTag tag, String key, UUID value) { tag.putUUID(key, value); }
+    //?}
 
     public static class PlayerChatData {
         public long lastSeen = System.currentTimeMillis();

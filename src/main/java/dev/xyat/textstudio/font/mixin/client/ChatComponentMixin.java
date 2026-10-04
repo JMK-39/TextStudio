@@ -10,7 +10,11 @@ import org.spongepowered.asm.mixin.injection.ModifyVariable;
 @Mixin(value = ChatComponent.class, priority = 100)
 public abstract class ChatComponentMixin {
     @ModifyVariable(
+            //? if >=26.1 {
+            /*method = "addMessage(Lnet/minecraft/network/chat/Component;Lnet/minecraft/network/chat/MessageSignature;Lnet/minecraft/client/multiplayer/chat/GuiMessageSource;Lnet/minecraft/client/multiplayer/chat/GuiMessageTag;)V",
+            *///?} else {
             method = "addMessage(Lnet/minecraft/network/chat/Component;Lnet/minecraft/network/chat/MessageSignature;ILnet/minecraft/client/GuiMessageTag;Z)V",
+            //?}
             at = @At("HEAD"),
             argsOnly = true,
             ordinal = 0

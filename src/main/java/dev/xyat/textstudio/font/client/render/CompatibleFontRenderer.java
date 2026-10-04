@@ -11,7 +11,6 @@ import dev.xyat.textstudio.font.client.parser.TextProcessor;
 import dev.xyat.textstudio.font.config.AuthorConfig;
 import net.minecraft.Util;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
@@ -19,6 +18,7 @@ import net.minecraft.network.chat.TextColor;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.FormattedCharSink;
 import org.joml.Matrix4f;
+import org.joml.Matrix4fc;
 
 import java.util.Arrays;
 
@@ -57,7 +57,7 @@ public final class CompatibleFontRenderer {
             float y,
             int color,
             boolean shadow,
-            Matrix4f matrix,
+            Matrix4fc matrix,
             MultiBufferSource buffers,
             Font.DisplayMode mode,
             int backgroundColor,
@@ -74,7 +74,7 @@ public final class CompatibleFontRenderer {
         if (!context.buffer.hasTextEffect) {
             return null;
         }
-        return render(font, context, x, y, color, shadow, matrix, buffers, mode, backgroundColor, packedLight);
+        return render(font, context, x, y, color, shadow, context.bufferOut.set(matrix, buffers, mode, backgroundColor, packedLight));
     }
 
     public static Integer tryRenderComponent(
@@ -84,7 +84,7 @@ public final class CompatibleFontRenderer {
             float y,
             int color,
             boolean shadow,
-            Matrix4f matrix,
+            Matrix4fc matrix,
             MultiBufferSource buffers,
             Font.DisplayMode mode,
             int backgroundColor,
@@ -114,11 +114,31 @@ public final class CompatibleFontRenderer {
             float y,
             int color,
             boolean shadow,
-            Matrix4f matrix,
+            Matrix4fc matrix,
             MultiBufferSource buffers,
             Font.DisplayMode mode,
             int backgroundColor,
             int packedLight
+    ) {
+        RenderContext context = CONTEXT.get();
+        if (context.rendering) {
+            return null;
+        }
+        return tryRenderSequence(font, sequence, x, y, color, shadow, context.bufferOut.set(matrix, buffers, mode, backgroundColor, packedLight));
+    }
+
+    /**
+     * Draws effect text glyph by glyph through { out}; returns null, drawing nothing, when the text has no
+     * effects. 26.1 GUI text uses this with an output that emits one GUI text state per glyph pass.
+     */
+    public static Integer tryRenderSequence(
+            Font font,
+            FormattedCharSequence sequence,
+            float x,
+            float y,
+            int color,
+            boolean shadow,
+            GlyphOut out
     ) {
         RenderContext context = CONTEXT.get();
         if (context.rendering || sequence == null) {
@@ -129,7 +149,7 @@ public final class CompatibleFontRenderer {
         sequence.accept(context.probe);
 
         if (context.probe.markerSeen && parseRawSequence(sequence, context)) {
-            return render(font, context, x, y, color, shadow, matrix, buffers, mode, backgroundColor, packedLight);
+            return render(font, context, x, y, color, shadow, out);
         }
 
         if (!context.probe.found) {
@@ -139,7 +159,7 @@ public final class CompatibleFontRenderer {
         context.buffer.clear();
         context.bufferSink.set(context.buffer);
         sequence.accept(context.bufferSink);
-        return render(font, context, x, y, color, shadow, matrix, buffers, mode, backgroundColor, packedLight);
+        return render(font, context, x, y, color, shadow, out);
     }
 
     public static Integer tryMeasureSequence(Font font, FormattedCharSequence sequence) {
@@ -206,7 +226,7 @@ public final class CompatibleFontRenderer {
         int end = start;
         while (end < buffer.size) {
             Style style = buffer.styles[end];
-            if (!(style instanceof IStyle effectStyle) || effectsDiffer(data, effectStyle.textstudio_font$getStyleData())) {
+            if (!((Object) style instanceof IStyle effectStyle) || effectsDiffer(data, effectStyle.textstudio_font$getStyleData())) {
                 break;
             }
             end++;
@@ -221,11 +241,7 @@ public final class CompatibleFontRenderer {
             float y,
             int color,
             boolean shadow,
-            Matrix4f matrix,
-            MultiBufferSource buffers,
-            Font.DisplayMode mode,
-            int backgroundColor,
-            int packedLight
+            GlyphOut out
     ) {
         GlyphBuffer buffer = context.buffer;
         int baseAlpha = color >>> 24;
@@ -246,7 +262,7 @@ public final class CompatibleFontRenderer {
             IStyle.TextEffectStyleData previousData = null;
             while (visualIndex < buffer.size) {
                 Style style = buffer.styles[visualIndex];
-                IStyle.TextEffectStyleData data = style instanceof IStyle effectStyle
+                IStyle.TextEffectStyleData data = (Object) style instanceof IStyle effectStyle
                         ? effectStyle.textstudio_font$getStyleData()
                         : null;
 
@@ -258,24 +274,13 @@ public final class CompatibleFontRenderer {
                     int end = visualIndex + 1;
                     while (end < buffer.size) {
                         Style nextStyle = buffer.styles[end];
-                        if (nextStyle instanceof IStyle nextEffectStyle && nextEffectStyle.textstudio_font$getStyleData() != null) {
+                        if ((Object) nextStyle instanceof IStyle nextEffectStyle && nextEffectStyle.textstudio_font$getStyleData() != null) {
                             break;
                         }
                         end++;
                     }
                     context.range.set(buffer, visualIndex, end);
-                    font.drawInBatch(
-                            context.range,
-                            cursorX,
-                            y,
-                            color,
-                            shadow,
-                            matrix,
-                            buffers,
-                            mode,
-                            backgroundColor,
-                            packedLight
-                    );
+                    out.draw(font, context.range, cursorX, y, color, shadow, true, 1.0f, 0.0f, 0.0f);
                     cursorX += font.width(context.range);
                     visualIndex = end;
                     continue;
@@ -331,11 +336,7 @@ public final class CompatibleFontRenderer {
                                 codePoint,
                                 advance,
                                 shadow,
-                                matrix,
-                                buffers,
-                                mode,
-                                backgroundColor,
-                                packedLight
+                                out
                         );
                     }
                 } else {
@@ -353,11 +354,13 @@ public final class CompatibleFontRenderer {
                                 sourceRgb,
                                 baseAlpha / 255.0f,
                                 currentRunConfig,
-                                matrix,
-                                buffers
+                                out,
+                                1.0f,
+                                0.0f,
+                                0.0f
                         );
                     } else {
-                        font.drawInBatch(context.single, cursorX, y, plainColor, shadow, matrix, buffers, mode, backgroundColor, packedLight);
+                        out.draw(font, context.single, cursorX, y, plainColor, shadow, true, 1.0f, 0.0f, 0.0f);
                     }
                 }
 
@@ -393,11 +396,7 @@ public final class CompatibleFontRenderer {
             int codePoint,
             int advance,
             boolean shadow,
-            Matrix4f matrix,
-            MultiBufferSource buffers,
-            Font.DisplayMode mode,
-            int backgroundColor,
-            int packedLight
+            GlyphOut out
     ) {
         int rgb = toRgb(state.r, state.g, state.b);
         int alpha = Math.max(1, Math.min(255, Math.round(clamp01(state.a) * 255.0f)));
@@ -411,17 +410,10 @@ public final class CompatibleFontRenderer {
             renderedStyle = renderedStyle.withStrikethrough(true);
         }
 
-        Matrix4f drawMatrix = matrix;
+        // Glyphs are scaled around their centre.
         float glyphScale = Math.max(0.10f, Math.min(4.0f, state.scale));
-        if (Math.abs(glyphScale - 1.0f) > 0.0001f) {
-            float centerX = state.x + Math.max(1.0f, advance) * 0.5f;
-            float centerY = state.y + font.lineHeight * 0.5f;
-            context.matrix.set(matrix)
-                    .translate(centerX, centerY, 0.0f)
-                    .scale(glyphScale, glyphScale, 1.0f)
-                    .translate(-centerX, -centerY, 0.0f);
-            drawMatrix = context.matrix;
-        }
+        float centerX = state.x + Math.max(1.0f, advance) * 0.5f;
+        float centerY = state.y + font.lineHeight * 0.5f;
 
         context.single.set(renderedStyle, codePoint);
         AuthorConfig.EffectSettings config = state.config;
@@ -434,7 +426,7 @@ public final class CompatibleFontRenderer {
             for (int i = passes; i >= 1; i--) {
                 float step = depth * i / passes;
                 float passAlpha = state.a * (float) Math.max(0.0, Math.min(1.0, config.extrudeAlpha)) * (0.45f + 0.55f * i / passes);
-                drawOffsetPass(font, context, renderedStyle, codePoint, state.x + step, state.y + step, darkRgb, passAlpha, drawMatrix, buffers, mode, packedLight);
+                drawOffsetPass(font, context, renderedStyle, codePoint, state.x + step, state.y + step, darkRgb, passAlpha, out, glyphScale, centerX, centerY);
             }
             passBudget -= passes;
         }
@@ -452,7 +444,7 @@ public final class CompatibleFontRenderer {
             for (int i = passes; i >= 1; i--) {
                 float ratio = i / (float) passes;
                 float passAlpha = state.a * (float) Math.max(0.0, Math.min(1.0, config.trailAlpha)) * (0.45f + 0.35f * ratio);
-                drawOffsetPass(font, context, renderedStyle, codePoint, state.x + dx * ratio, state.y + dy * ratio, rgb, passAlpha, drawMatrix, buffers, mode, packedLight);
+                drawOffsetPass(font, context, renderedStyle, codePoint, state.x + dx * ratio, state.y + dy * ratio, rgb, passAlpha, out, glyphScale, centerX, centerY);
             }
             passBudget -= passes;
         }
@@ -462,7 +454,7 @@ public final class CompatibleFontRenderer {
             float width = (float) Math.max(0.35, Math.min(2.5, config.outlineWidth));
             float outlineAlpha = state.a * (float) Math.max(0.0, Math.min(1.0, config.outlineAlpha));
             int outlineRgb = scaleRgb(rgb, 0.08f);
-            drawCardinalPasses(font, context, renderedStyle, codePoint, state.x, state.y, width, outlineRgb, outlineAlpha, passes, drawMatrix, buffers, mode, packedLight);
+            drawCardinalPasses(font, context, renderedStyle, codePoint, state.x, state.y, width, outlineRgb, outlineAlpha, passes, out, glyphScale, centerX, centerY);
             passBudget -= passes;
         }
 
@@ -473,11 +465,11 @@ public final class CompatibleFontRenderer {
             }
             float chromaticAlpha = clamp01((float) config.chromaticAlpha * state.a);
             if (passBudget > 0) {
-                drawOffsetPass(font, context, renderedStyle, codePoint, state.x - offset, state.y, 0x00FFFF, chromaticAlpha, drawMatrix, buffers, mode, packedLight);
+                drawOffsetPass(font, context, renderedStyle, codePoint, state.x - offset, state.y, 0x00FFFF, chromaticAlpha, out, glyphScale, centerX, centerY);
                 passBudget--;
             }
             if (passBudget > 0) {
-                drawOffsetPass(font, context, renderedStyle, codePoint, state.x + offset, state.y, 0xFF0000, chromaticAlpha, drawMatrix, buffers, mode, packedLight);
+                drawOffsetPass(font, context, renderedStyle, codePoint, state.x + offset, state.y, 0xFF0000, chromaticAlpha, out, glyphScale, centerX, centerY);
             }
         }
 
@@ -494,11 +486,13 @@ public final class CompatibleFontRenderer {
                     rgb,
                     state.a,
                     config,
-                    drawMatrix,
-                    buffers
+                    out,
+                    glyphScale,
+                    centerX,
+                    centerY
             );
         } else {
-            font.drawInBatch(context.single, state.x, state.y, finalColor, shadow, drawMatrix, buffers, mode, backgroundColor, packedLight);
+            out.draw(font, context.single, state.x, state.y, finalColor, shadow, true, glyphScale, centerX, centerY);
         }
     }
 
@@ -514,8 +508,10 @@ public final class CompatibleFontRenderer {
             int rgb,
             float glyphAlpha,
             AuthorConfig.EffectSettings config,
-            Matrix4f matrix,
-            MultiBufferSource buffers
+            GlyphOut out,
+            float scale,
+            float centerX,
+            float centerY
     ) {
         int outlineColor = ScreenSpaceGlowMath.outlineArgb(
                 rgb,
@@ -523,16 +519,7 @@ public final class CompatibleFontRenderer {
                 config.glowAlpha,
                 config.glowRadius
         );
-        font.drawInBatch8xOutline(
-                sequence,
-                x,
-                y,
-                bodyColor,
-                outlineColor,
-                matrix,
-                buffers,
-                LightTexture.FULL_BRIGHT
-        );
+        out.drawOutlined(font, sequence, x, y, bodyColor, outlineColor, scale, centerX, centerY);
     }
 
     private static void drawCardinalPasses(
@@ -546,10 +533,10 @@ public final class CompatibleFontRenderer {
             int rgb,
             float alpha,
             int passes,
-            Matrix4f matrix,
-            MultiBufferSource buffers,
-            Font.DisplayMode mode,
-            int packedLight
+            GlyphOut out,
+            float scale,
+            float centerX,
+            float centerY
     ) {
         for (int i = 0; i < passes; i++) {
             float dx = 0.0f;
@@ -560,7 +547,7 @@ public final class CompatibleFontRenderer {
                 case 2 -> dy = -distance;
                 default -> dy = distance;
             }
-            drawOffsetPass(font, context, style, codePoint, x + dx, y + dy, rgb, alpha, matrix, buffers, mode, packedLight);
+            drawOffsetPass(font, context, style, codePoint, x + dx, y + dy, rgb, alpha, out, scale, centerX, centerY);
         }
     }
 
@@ -573,10 +560,10 @@ public final class CompatibleFontRenderer {
             float y,
             int rgb,
             float alpha,
-            Matrix4f matrix,
-            MultiBufferSource buffers,
-            Font.DisplayMode mode,
-            int packedLight
+            GlyphOut out,
+            float scale,
+            float centerX,
+            float centerY
     ) {
         if (alpha <= 0.001f) {
             return;
@@ -584,7 +571,7 @@ public final class CompatibleFontRenderer {
         int a = Math.max(1, Math.min(255, Math.round(clamp01(alpha) * 255.0f)));
         Style style = context.styleCache.color(baseStyle, rgb);
         context.single.set(style, codePoint);
-        font.drawInBatch(context.single, x, y, a << 24 | rgb, false, matrix, buffers, mode, 0, packedLight);
+        out.draw(font, context.single, x, y, a << 24 | rgb, false, false, scale, centerX, centerY);
     }
 
     private static int scaleRgb(int rgb, float factor) {
@@ -606,6 +593,77 @@ public final class CompatibleFontRenderer {
     }
 
 
+    /**
+     * Where effect glyphs go. Each call draws text at x, y, scaled by {@code scale} around (centerX, centerY);
+     * {@code background} is false for the extra passes, so a text background is drawn once.
+     */
+    public interface GlyphOut {
+        void draw(Font font, FormattedCharSequence text, float x, float y, int color, boolean shadow, boolean background,
+                  float scale, float centerX, float centerY);
+
+        /** Draws text with an eight-direction outline, for the emissive glow. */
+        void drawOutlined(Font font, FormattedCharSequence text, float x, float y, int bodyColor, int outlineColor,
+                          float scale, float centerX, float centerY);
+    }
+
+    // Full block and sky light, as LightTexture.FULL_BRIGHT.
+    private static final int FULL_BRIGHT = 0xF000F0;
+
+    /** Draws into a MultiBufferSource: world text on every version, and GUI text before 26.1. */
+    private static final class BufferGlyphOut implements GlyphOut {
+        private final Matrix4f scaled = new Matrix4f();
+        private final Matrix4f copy = new Matrix4f();
+        private Matrix4fc matrix;
+        private MultiBufferSource buffers;
+        private Font.DisplayMode mode;
+        private int backgroundColor;
+        private int packedLight;
+
+        private BufferGlyphOut set(Matrix4fc matrix, MultiBufferSource buffers, Font.DisplayMode mode, int backgroundColor, int packedLight) {
+            this.matrix = matrix;
+            this.buffers = buffers;
+            this.mode = mode;
+            this.backgroundColor = backgroundColor;
+            this.packedLight = packedLight;
+            return this;
+        }
+
+        private Matrix4fc matrix(float scale, float centerX, float centerY) {
+            if (Math.abs(scale - 1.0f) <= 0.0001f) {
+                return matrix;
+            }
+            return scaled.set(matrix)
+                    .translate(centerX, centerY, 0.0f)
+                    .scale(scale, scale, 1.0f)
+                    .translate(-centerX, -centerY, 0.0f);
+        }
+
+        // Font takes a Matrix4fc on 26.1 and a Matrix4f before.
+        //? if >=26.1 {
+        /*private Matrix4fc drawMatrix(float scale, float centerX, float centerY) {
+            return matrix(scale, centerX, centerY);
+        }
+        *///?} else {
+        private Matrix4f drawMatrix(float scale, float centerX, float centerY) {
+            Matrix4fc drawn = matrix(scale, centerX, centerY);
+            return drawn instanceof Matrix4f plain ? plain : copy.set(drawn);
+        }
+        //?}
+
+        @Override
+        public void draw(Font font, FormattedCharSequence text, float x, float y, int color, boolean shadow, boolean background,
+                         float scale, float centerX, float centerY) {
+            font.drawInBatch(text, x, y, color, shadow, drawMatrix(scale, centerX, centerY), buffers, mode,
+                    background ? backgroundColor : 0, packedLight);
+        }
+
+        @Override
+        public void drawOutlined(Font font, FormattedCharSequence text, float x, float y, int bodyColor, int outlineColor,
+                                 float scale, float centerX, float centerY) {
+            font.drawInBatch8xOutline(text, x, y, bodyColor, outlineColor, drawMatrix(scale, centerX, centerY), buffers, FULL_BRIGHT);
+        }
+    }
+
     private static final class RenderContext {
         private final GlyphBuffer buffer = new GlyphBuffer();
         private final MutableSingleSequence single = new MutableSingleSequence();
@@ -614,7 +672,7 @@ public final class CompatibleFontRenderer {
         private final BufferSink bufferSink = new BufferSink();
         private final EffectProbeSink probe = new EffectProbeSink();
         private final RawTextSink rawText = new RawTextSink();
-        private final Matrix4f matrix = new Matrix4f();
+        private final BufferGlyphOut bufferOut = new BufferGlyphOut();
         private final GlyphAdvanceCache advanceCache = new GlyphAdvanceCache();
         private final ColoredStyleCache styleCache = new ColoredStyleCache();
         private final EffectStateCache effectCache = new EffectStateCache();
@@ -762,7 +820,7 @@ public final class CompatibleFontRenderer {
             ensureCapacity(size + 1);
             styles[size] = style;
             codePoints[size] = codePoint;
-            if (style instanceof IStyle effectStyle && effectStyle.textstudio_font$getStyleData() != null) {
+            if ((Object) style instanceof IStyle effectStyle && effectStyle.textstudio_font$getStyleData() != null) {
                 hasTextEffect = true;
             }
             size++;
@@ -848,7 +906,7 @@ public final class CompatibleFontRenderer {
             if (codePoint == '$' || codePoint == 0x2063) {
                 markerSeen = true;
             }
-            if (style instanceof IStyle effectStyle && effectStyle.textstudio_font$getStyleData() != null) {
+            if ((Object) style instanceof IStyle effectStyle && effectStyle.textstudio_font$getStyleData() != null) {
                 found = true;
             }
             return true;
@@ -866,7 +924,7 @@ public final class CompatibleFontRenderer {
         public boolean accept(@Nonnull FormattedCharSink sink) {
             for (int i = 0; i < buffer.size; i++) {
                 Style style = buffer.styles[i];
-                if (style instanceof IStyle effectStyle) {
+                if ((Object) style instanceof IStyle effectStyle) {
                     IStyle.TextEffectStyleData data = effectStyle.textstudio_font$getStyleData();
                     if (data != null) {
                         boolean bold = data.bold;
