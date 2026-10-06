@@ -1,3 +1,15 @@
+2026年10月06日 08时35分 — 26.10.6
+
+- The guide page's preset names and its "Current" line, and the editor's selected preset ID, scroll inside their own space instead of running to the frame or under the Cancel and Save buttons.
+- Built against KineticCore 26.10.6, so long labels show an ellipsis and scroll on hover, and on 26.1.2 the preset rows keep their right border.
+- Checked with screenshots of all three pages on 1.21.1 and 26.1.2, in English and Chinese, at two window sizes and with extra-long text.
+
+- 指南页面的预设名称与"当前"一行，以及编辑器中选中的预设 ID，改为在各自区域内滚动，不再延伸到边框或压到"取消""保存"按钮下面。
+- 基于 KineticCore 26.10.6 构建：过长的标签显示省略号并在悬停时滚动；26.1.2 上预设行的右边框不再缺失。
+- 已在 1.21.1 与 26.1.2 上对全部 3 个页面截图检查，涵盖英文和中文、两种窗口尺寸以及超长文本。
+
+---
+
 2026年10月04日 13时42分 — 26.10.4
 
 - Added NeoForge 26.1.2 support (Java 25, KineticCore 26.10.3+). Text effects, the effect editor and its live preview, chat timestamps, sender heads, chat history and author names work on 26.1.2.

@@ -11,6 +11,9 @@ import com.mojang.serialization.JsonOps;
 @net.minecraftforge.fml.common.Mod("textstudio_validation")
 public final class RuntimeStyleValidation {
     public RuntimeStyleValidation() {
+        if (Boolean.getBoolean("textstudio.guiValidation")) {
+            dev.xyat.kineticcore.api.runtime.KineticPlatform.runOnClient(() -> GuiCaptureValidation::install);
+        }
         if (((IStyle) (Object) Style.EMPTY).textstudio_font$getStyleData() != null) throw new AssertionError("Shared EMPTY was mutated");
         for (int packed : new int[] {0, 255, 256, 4096, 8192, 16383}) {
             Style style = StyleConstructionAccess.textstudio_font$newStyle(null, null, null, null, null, null, null, null, null, null);

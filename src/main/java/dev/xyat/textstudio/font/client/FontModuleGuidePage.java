@@ -129,10 +129,11 @@ public final class FontModuleGuidePage extends KineticPage {
         graphics.scrollingText(KineticI18n.translatable("gui.textstudio.font.guide.quick_use"), INFO_X + 12, INFO_Y + 10, INFO_W - 24, 0xFFFFFF, false);
         graphics.scrollingText(KineticI18n.translatable("gui.textstudio.font.guide.step1"), INFO_X + 12, INFO_Y + 25, INFO_W - 24, 0xFFFFFF, false);
         graphics.scrollingText(KineticI18n.translatable("gui.textstudio.font.guide.step2"), INFO_X + 12, INFO_Y + 37, INFO_W - 24, 0xFFFFFF, false);
-        graphics.text(
+        graphics.scrollingText(
                 KineticI18n.translatable("gui.textstudio.font.guide.selected", selectedPreset + 1, presetName(selectedPreset)),
                 INFO_X + 12,
                 INFO_Y + 78,
+                INFO_W - 24,
                 0xFFFFFF,
                 false
         );
@@ -319,7 +320,7 @@ public final class FontModuleGuidePage extends KineticPage {
         @Override
         protected void renderRow(KineticGraphics graphics, Integer index, int rowIndex, int x, int y, int width,
                                  int height, boolean hovered, boolean selected) {
-            graphics.text(Component.literal((index + 1) + ". ").append(presetName(index)), x + 4, y + 4, 0xFFFFFF, false);
+            graphics.scrollingText(Component.literal((index + 1) + ". ").append(presetName(index)), x + 4, y + 4, width - 8, 0xFFFFFF, false);
         }
     }
 }

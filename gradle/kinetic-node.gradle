@@ -274,7 +274,7 @@ if (pLoader == 'neoforge') {
     }
     tasks.register('runtimeValidationJar', Jar) {
         dependsOn 'testClasses', writeMetadata
-        from(sourceSets.test.output) { include 'dev/xyat/textstudiovalidation/RuntimeStyleValidation.class' }
+        from(sourceSets.test.output) { include 'dev/xyat/textstudiovalidation/*.class' }
         from metadata
         archiveFileName = 'textstudio-validation.jar'
     }
