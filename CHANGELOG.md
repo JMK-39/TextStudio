@@ -42,12 +42,12 @@
 
 2026年10月03日 15时35分 — 26.10.3
 
-- Added NeoForge 1.21.1 support alongside Forge 1.20.1, using Java 21 and matching KineticCore 26.10.3+.
+- Added NeoForge 1.21.1 support alongside Forge 1.20.1, using matching KineticCore 26.10.3+.
 - Adapted text-style saving and synchronization for 1.21.1 and fixed the vanilla chat scrollbar overlapping the custom scrollbar.
 - Both builds and targeted 1.21.1 runtime checks passed; complete multiplayer and chat-history scenarios have not all been tested.
 - The 26.1.2 node is reserved and disabled; it is not a supported release.
 
-- 新增 NeoForge 1.21.1 支持，同时保留 Forge 1.20.1；使用 Java 21 和对应版本的 KineticCore 26.10.3+。
+- 新增 NeoForge 1.21.1 支持，同时保留 Forge 1.20.1；使用对应版本的 KineticCore 26.10.3+。
 - 适配 1.21.1 文字样式的保存与同步，修复原版聊天滚动条与自定义滚动条重叠。
 - 两个版本构建及针对性的 1.21.1 运行检查通过；多人联机与聊天历史场景尚未全部测试。
 - 26.1.2 节点仅预留、未启用，不代表已支持。
