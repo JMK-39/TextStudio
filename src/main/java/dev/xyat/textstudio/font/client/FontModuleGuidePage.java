@@ -126,7 +126,8 @@ public final class FontModuleGuidePage extends KineticPage {
     protected void renderForeground(KineticGraphics graphics, int mouseX, int mouseY, float partialTick) {
         graphics.scrollingText(KineticI18n.translatable("gui.textstudio.font.guide.presets"), LIST_X + 9, LIST_Y + 8, LIST_W - 18, 0xFFFFFF, false);
 
-        graphics.scrollingText(KineticI18n.translatable("gui.textstudio.font.guide.quick_use"), INFO_X + 12, INFO_Y + 10, INFO_W - 24, 0xFFFFFF, false);
+        // Ends 4 px before the Back button that shares this row.
+        graphics.scrollingText(KineticI18n.translatable("gui.textstudio.font.guide.quick_use"), INFO_X + 12, INFO_Y + 10, INFO_W - 72 - 12 - 4, 0xFFFFFF, false);
         graphics.scrollingText(KineticI18n.translatable("gui.textstudio.font.guide.step1"), INFO_X + 12, INFO_Y + 25, INFO_W - 24, 0xFFFFFF, false);
         graphics.scrollingText(KineticI18n.translatable("gui.textstudio.font.guide.step2"), INFO_X + 12, INFO_Y + 37, INFO_W - 24, 0xFFFFFF, false);
         graphics.scrollingText(

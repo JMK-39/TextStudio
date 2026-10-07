@@ -1,3 +1,11 @@
+2026年10月07日 00时50分 — Guide header / 指南标题
+
+- The guide page's "Quick Use" heading ends before the Back button in its row instead of running under it. Checked inside the 1.20.1 modpack at 1920×1080 and 854×480 with an automatic check that no text or button touches a frame line or another element.
+
+- 指南页面的"快速使用"标题在同一行的返回按钮之前结束，不再压到按钮下面。已在 1.20.1 整合包中以 1920×1080 与 854×480 检查，并自动检查文字和按钮都不碰到边框线或其他元素。
+
+---
+
 2026年10月06日 08时35分 — 26.10.6
 
 - The guide page's preset names and its "Current" line, and the editor's selected preset ID, scroll inside their own space instead of running to the frame or under the Cancel and Save buttons.
