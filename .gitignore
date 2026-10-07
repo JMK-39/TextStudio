@@ -27,3 +27,6 @@ forge*changelog.txt
 /CF_UPDATE_LOG.md
 
 run-*
+*.zip
+*.7z
+/wiki/

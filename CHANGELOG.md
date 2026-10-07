@@ -1,42 +1,38 @@
+2026年10月08日 — Chat toolbar spacing / 聊天工具栏间距
+
+- The chat toolbar keeps a gap from the frame instead of touching it.
+
+- 聊天工具栏与边框保留间距，不再紧贴边框。
+
+---
+
 2026年10月07日 00时50分 — Guide header / 指南标题
 
-- The guide page's "Quick Use" heading ends before the Back button in its row instead of running under it. Checked inside the 1.20.1 modpack at 1920×1080 and 854×480 with an automatic check that no text or button touches a frame line or another element.
+- The guide page's "Quick Use" heading ends before the Back button in its row instead of running under it.
 
-- 指南页面的"快速使用"标题在同一行的返回按钮之前结束，不再压到按钮下面。已在 1.20.1 整合包中以 1920×1080 与 854×480 检查，并自动检查文字和按钮都不碰到边框线或其他元素。
+- 指南页面的"快速使用"标题在同一行的返回按钮之前结束，不再压到按钮下面。
 
 ---
 
 2026年10月06日 08时35分 — 26.10.6
 
 - The guide page's preset names and its "Current" line, and the editor's selected preset ID, scroll inside their own space instead of running to the frame or under the Cancel and Save buttons.
-- Built against KineticCore 26.10.6, so long labels show an ellipsis and scroll on hover, and on 26.1.2 the preset rows keep their right border.
-- Checked with screenshots of all three pages on 1.21.1 and 26.1.2, in English and Chinese, at two window sizes and with extra-long text.
+- With KineticCore 26.10.6, long labels show an ellipsis and scroll on hover, and on 26.1.2 the preset rows keep their right border.
 
 - 指南页面的预设名称与"当前"一行，以及编辑器中选中的预设 ID，改为在各自区域内滚动，不再延伸到边框或压到"取消""保存"按钮下面。
-- 基于 KineticCore 26.10.6 构建：过长的标签显示省略号并在悬停时滚动；26.1.2 上预设行的右边框不再缺失。
-- 已在 1.21.1 与 26.1.2 上对全部 3 个页面截图检查，涵盖英文和中文、两种窗口尺寸以及超长文本。
+- 使用 KineticCore 26.10.6 时，过长的标签显示省略号并在悬停时滚动；26.1.2 上预设行的右边框不再缺失。
 
 ---
 
 2026年10月04日 13时42分 — 26.10.4
 
 - Added NeoForge 26.1.2 support (Java 25, KineticCore 26.10.3+). Text effects, the effect editor and its live preview, chat timestamps, sender heads, chat history and author names work on 26.1.2.
-- On 26.1.2, effect text in menus, chat and tooltips is drawn glyph by glyph through 26.1's new GUI text pipeline, with correct letter spacing.
+- On 26.1.2, effect text in menus, chat and tooltips keeps correct letter spacing.
 - Long labels in the effect editor and the guide page (common in English) now stay inside their space and scroll like vanilla buttons instead of covering the input boxes next to them.
-- Checked on 26.1.2: style codec round trips, joining a world, chat and the editor in English and Chinese.
 
 - 新增 NeoForge 26.1.2 支持（Java 25，需要 KineticCore 26.10.3+）。文字特效、特效编辑器及其实时预览、聊天时间戳、发送者头像、聊天记录和作者名称均可在 26.1.2 中使用。
-- 26.1.2 中，菜单、聊天和悬浮提示里的特效文字通过 26.1 新的界面文字流程逐字绘制，字间距正确。
+- 26.1.2 中，菜单、聊天和悬浮提示里的特效文字保持正确字间距。
 - 特效编辑器和说明页中过长的标签（英文下较常见）现在会留在自己的区域内，并像原版按钮一样滚动显示，不再覆盖旁边的输入框。
-- 已在 26.1.2 中检查：样式编解码往返、进入世界、聊天，以及中英文下的编辑器界面。
-
----
-
-2026年10月04日 — Language key validation / 语言键一致性检查
-
-- Require identical authored English/Chinese keys and string values in source, version overrides and packaged resources; generated formatting keys are rejected during builds.
-
-- 强制检查源码、版本覆盖与最终资源的中英文完整键名一致、值为字符串；构建禁止派生格式语言键。
 
 ---
 
@@ -44,23 +40,11 @@
 
 - Added NeoForge 1.21.1 support alongside Forge 1.20.1, using matching KineticCore 26.10.3+.
 - Adapted text-style saving and synchronization for 1.21.1 and fixed the vanilla chat scrollbar overlapping the custom scrollbar.
-- Both builds and targeted 1.21.1 runtime checks passed; complete multiplayer and chat-history scenarios have not all been tested.
-- The 26.1.2 node is reserved and disabled; it is not a supported release.
+- Minecraft 26.1.2 is not yet supported.
 
 - 新增 NeoForge 1.21.1 支持，同时保留 Forge 1.20.1；使用对应版本的 KineticCore 26.10.3+。
 - 适配 1.21.1 文字样式的保存与同步，修复原版聊天滚动条与自定义滚动条重叠。
-- 两个版本构建及针对性的 1.21.1 运行检查通过；多人联机与聊天历史场景尚未全部测试。
-- 26.1.2 节点仅预留、未启用，不代表已支持。
-
----
-
-2026年10月02日 13时53分
-
-- Enabled addon architecture validation; retained vanilla ChatScreen/EditBox and Font callback signatures required by the existing integrations.
-- Recorded these callback boundaries only in the build configuration. No source-level warning suppression was added. The full build and final-JAR API verification passed.
-
-- 接入附属架构检查，保留现有联动必需的原版 ChatScreen/EditBox 与 Font 回调签名。
-- 回调边界仅在 build 配置中精确声明，未新增源码警告抑制。完整构建和最终 JAR API 检查通过。
+- 尚不支持 Minecraft 26.1.2。
 
 ---
 
