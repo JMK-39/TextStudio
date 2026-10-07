@@ -1,3 +1,11 @@
+2026年10月08日 — Chat toolbar spacing / 聊天工具栏间距
+
+- The chat toolbar keeps a gap from the frame instead of touching it.
+
+- 聊天工具栏与边框保留间距，不再紧贴边框。
+
+---
+
 2026年10月07日 00时50分 — Guide header / 指南标题
 
 - The guide page's "Quick Use" heading ends before the Back button in its row instead of running under it.
