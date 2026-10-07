@@ -89,16 +89,16 @@ public class ChatCopyCanvasPage extends KineticPage {
         int cX = (width() - FRAME_W) / 2;
         int cY = 25;
 
-        this.searchBox = ui.textField(cX + 2, cY - 18, 120)
+        this.searchBox = ui.textField(cX + 2, cY - 20, 120)
                 .label(KineticI18n.translatable("gui.textstudio.chat.search"))
                 .placeholder(KineticI18n.translatable("gui.textstudio.chat.search_hint"))
                 .value(lastSearchQueryRaw)
                 .firstShownTextAsDefault().build();
         this.searchBox.onTextChange(this::onSearchChanged);
 
-        ui.button(cX + 125, cY - 18, 30).text(KineticI18n.translatable("gui.textstudio.chat.previous")).onClick(() -> navigateMatch(-1)).build();
-        ui.button(cX + 160, cY - 18, 30).text(KineticI18n.translatable("gui.textstudio.chat.next")).onClick(() -> navigateMatch(1)).build();
-        ui.button(cX + FRAME_W - 70, cY - 18, 70)
+        ui.button(cX + 125, cY - 20, 30).text(KineticI18n.translatable("gui.textstudio.chat.previous")).onClick(() -> navigateMatch(-1)).build();
+        ui.button(cX + 160, cY - 20, 30).text(KineticI18n.translatable("gui.textstudio.chat.next")).onClick(() -> navigateMatch(1)).build();
+        ui.button(cX + FRAME_W - 70, cY - 20, 70)
                 .text(KineticI18n.translatable("gui.textstudio.chat.chat.back"))
                 .tooltip(KineticI18n.translatable("gui.textstudio.chat.chat.back.desc"))
                 .onClick(this::close)
@@ -160,7 +160,7 @@ public class ChatCopyCanvasPage extends KineticPage {
 
         if (!lastSearchQuery.isEmpty()) {
             String countText = (matches.isEmpty() ? 0 : currentMatchIdx + 1) + "/" + matches.size();
-            g.text(countText, cX + 195, cY - 16, 0xFFAAAAAA, false);
+            g.text(countText, cX + 195, cY - 18, 0xFFAAAAAA, false);
         }
 
         KineticTheme.surface(g, cX, cY, FRAME_W, cH, KineticTheme.Surface.PANEL_ALT);
