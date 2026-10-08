@@ -1,4 +1,4 @@
-param([Parameter(Mandatory=$true)][string]$Jar,[Parameter(Mandatory=$true)][ValidateSet('forge','neoforge')][string]$Loader,[string]$ModId='textstudio',[int]$ClassVersion=65)
+param([Parameter(Mandatory=$true)][string]$Jar,[Parameter(Mandatory=$true)][ValidateSet('forge','neoforge')][string]$Loader,[string]$ModId='textstudio',[int]$ClassVersion=65,[string]$CoreRange='')
 $ErrorActionPreference='Stop'
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $zip=[IO.Compression.ZipFile]::OpenRead($Jar)
@@ -25,7 +25,9 @@ try {
     $toml=Read-Entry $metadata
     if($zip.GetEntry($other)) { throw "Wrong loader metadata also packaged: $other" }
     if($toml -match '\$\{') { throw 'Unexpanded metadata placeholders' }
-    if($toml -notmatch 'versionRange="\[26\.10\.3,\)"') { throw 'KineticCore dependency range changed' }
+    if (!$CoreRange) { $CoreRange=if($Loader -eq 'forge') {'[26.10.7,)'} else {'[26.10.3,)'} }
+    $coreDependency=[regex]::Match($toml,'(?s)modId="kineticcore"\s+.*?versionRange="([^"]+)"')
+    if(!$coreDependency.Success -or $coreDependency.Groups[1].Value -ne $CoreRange) { throw 'KineticCore dependency range changed' }
     $manifest=Read-Entry 'META-INF/MANIFEST.MF'
     $configs=@($zip.Entries | Where-Object { $_.Name -like '*.mixins.json' })
     if(!$configs.Count) { throw 'Release has no Mixin configurations' }
