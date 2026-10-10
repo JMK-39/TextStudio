@@ -180,8 +180,8 @@ public final class FontModuleConfigPage extends KineticPage {
 
         addActionButton(
                 KineticI18n.translatable("gui.textstudio.font.editor.cancel"),
-                512,
-                PREVIEW_Y + 4,
+                LIST_X + 4,
+                LIST_Y + 4,
                 56,
                 18,
                 this::close,
@@ -696,14 +696,14 @@ public final class FontModuleConfigPage extends KineticPage {
 
     @Override
     protected void renderForeground(KineticGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        graphics.scrollingText(KineticI18n.translatable("gui.textstudio.font.editor.presets"), LIST_X + 9, LIST_Y + 8, LIST_W - 18, 0xFFFFFF, false);
+        graphics.scrollingText(KineticI18n.translatable("gui.textstudio.font.editor.presets"), LIST_X + 64, LIST_Y + 8, LIST_W - 68, 0xFFFFFF, false);
         graphics.scrollingText(KineticI18n.translatable("gui.textstudio.font.editor.preview.title"), PREVIEW_X + 12, PREVIEW_Y + 8, 80, 0xFFFFFF, false);
-        // Ends 4 px before the Cancel button at x 512.
+        // Ends 4 px before the Save button at x 572.
         graphics.scrollingText(
                 KineticI18n.translatable("gui.textstudio.font.editor.preset_selected", selectedPreset + 1),
                 PREVIEW_X + 96,
                 PREVIEW_Y + 8,
-                512 - 4 - (PREVIEW_X + 96),
+                572 - 4 - (PREVIEW_X + 96),
                 0xFFFFFF,
                 true
         );

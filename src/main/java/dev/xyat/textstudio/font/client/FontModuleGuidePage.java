@@ -68,7 +68,7 @@ public final class FontModuleGuidePage extends KineticPage {
         selectedPreset = Mth.clamp(selectedPreset, 0, Math.max(0, AuthorConfig.EFFECTS.size() - 1));
         if (presetList != null) listScrollOffset = presetList.scrollOffset();
 
-        ui.button(INFO_X + INFO_W - 72, INFO_Y + 6, 64)
+        ui.button(LIST_X + 6, LIST_Y + 6, 64)
                 .text(KineticI18n.translatable("gui.textstudio.font.guide.back"))
                 .onClick(this::close)
                 .build();
@@ -124,10 +124,9 @@ public final class FontModuleGuidePage extends KineticPage {
 
     @Override
     protected void renderForeground(KineticGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        graphics.scrollingText(KineticI18n.translatable("gui.textstudio.font.guide.presets"), LIST_X + 9, LIST_Y + 8, LIST_W - 18, 0xFFFFFF, false);
+        graphics.scrollingText(KineticI18n.translatable("gui.textstudio.font.guide.presets"), LIST_X + 74, LIST_Y + 8, LIST_W - 83, 0xFFFFFF, false);
 
-        // Ends 4 px before the Back button that shares this row.
-        graphics.scrollingText(KineticI18n.translatable("gui.textstudio.font.guide.quick_use"), INFO_X + 12, INFO_Y + 10, INFO_W - 72 - 12 - 4, 0xFFFFFF, false);
+        graphics.scrollingText(KineticI18n.translatable("gui.textstudio.font.guide.quick_use"), INFO_X + 12, INFO_Y + 10, INFO_W - 24, 0xFFFFFF, false);
         graphics.scrollingText(KineticI18n.translatable("gui.textstudio.font.guide.step1"), INFO_X + 12, INFO_Y + 25, INFO_W - 24, 0xFFFFFF, false);
         graphics.scrollingText(KineticI18n.translatable("gui.textstudio.font.guide.step2"), INFO_X + 12, INFO_Y + 37, INFO_W - 24, 0xFFFFFF, false);
         graphics.scrollingText(

@@ -1,3 +1,15 @@
+2026年10月10日 — Navigation placement / 返回按钮位置
+
+- Cancel in the font preset editor and Back in the font guide and chat copy canvas now sit at the top left. Preset lists, previews, effect controls and the chat history frame keep their existing layout.
+- Header titles and searches leave room for navigation; long labels and chat match counts scroll within their own space.
+- Navigation button labels use white text.
+
+- 字体预设编辑器的“取消”、字体指南与聊天复制画布的“返回”现在位于左上角。预设列表、预览、效果控件与聊天历史边框保持现有布局。
+- 顶部标题与搜索为返回控件留出空间；过长标签与聊天匹配计数在各自范围内滚动显示。
+- 返回类按钮的文字统一使用白色。
+
+---
+
 2026年10月08日 — Chat toolbar spacing / 聊天工具栏间距
 
 - The chat toolbar keeps a gap from the frame instead of touching it.
