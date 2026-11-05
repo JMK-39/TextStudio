@@ -48,11 +48,10 @@ public class ChatCopyCanvasPage extends KineticPage {
     private String toastText = "";
     private long toastEndTime = 0;
 
-    private static final int FRAME_W = 360;
+    private static final int FRAME_W = 632;
     private static final int SCROLLBAR_WIDTH = 4;
     private static final int SCROLLBAR_MARGIN = 2;
     private static final int LINE_H = 10;
-    private static final int MARGIN = 2;
     private static final int PADDING = 2;
 
     private static final int INNER_PADDING = 2;
@@ -90,16 +89,16 @@ public class ChatCopyCanvasPage extends KineticPage {
         int cX = (width() - FRAME_W) / 2;
         int cY = 25;
 
-        this.searchBox = ui.textField(cX + 74, cY - 20, 120)
+        this.searchBox = ui.textField(cX + 74, cY - 21, 160)
                 .label(KineticI18n.translatable("gui.textstudio.chat.search"))
                 .placeholder(KineticI18n.translatable("gui.textstudio.chat.search_hint"))
                 .value(lastSearchQueryRaw)
                 .firstShownTextAsDefault().build();
         this.searchBox.onTextChange(this::onSearchChanged);
 
-        ui.button(cX + 196, cY - 20, 30).text(KineticI18n.translatable("gui.textstudio.chat.previous")).onClick(() -> navigateMatch(-1)).build();
-        ui.button(cX + 228, cY - 20, 30).text(KineticI18n.translatable("gui.textstudio.chat.next")).onClick(() -> navigateMatch(1)).build();
-        ui.button(cX + 2, cY - 20, 70)
+        ui.button(cX + 236, cY - 21, 30).text(KineticI18n.translatable("gui.textstudio.chat.previous")).onClick(() -> navigateMatch(-1)).build();
+        ui.button(cX + 268, cY - 21, 30).text(KineticI18n.translatable("gui.textstudio.chat.next")).onClick(() -> navigateMatch(1)).build();
+        ui.button(4, 4, 40)
                 .text(KineticI18n.translatable("gui.textstudio.chat.chat.back"))
                 .tooltip(KineticI18n.translatable("gui.textstudio.chat.chat.back.desc"))
                 .onClick(this::close)
@@ -148,6 +147,7 @@ public class ChatCopyCanvasPage extends KineticPage {
     @Override
     protected void renderBackground(KineticGraphics g, int mx, int my, float pt) {
         updateScroll();
+        KineticTheme.panel(g, 0, 0, width(), height());
         int cX = (width() - FRAME_W) / 2;
         int cY = 25;
         int cH = height() - 75 + BOTTOM_EXPAND;
@@ -159,13 +159,14 @@ public class ChatCopyCanvasPage extends KineticPage {
         long now = System.currentTimeMillis();
         double visualScroll = visualScroll();
 
+        // The toolbar shares the list's dark surface, so its controls never sit directly on the world.
+        KineticTheme.surface(g, cX, cY - 24, FRAME_W, cH + 24, KineticTheme.Surface.PANEL_ALT);
         if (!lastSearchQuery.isEmpty()) {
             String countText = (matches.isEmpty() ? 0 : currentMatchIdx + 1) + "/" + matches.size();
-            g.scrollingText(Component.literal(countText), cX + 260, cY - 18, FRAME_W - 262, 0xFFAAAAAA, false);
+            g.scrollingText(Component.literal(countText), cX + 300, cY - 16, FRAME_W - 302, 0xFFAAAAAA, false);
         }
 
-        KineticTheme.surface(g, cX, cY, FRAME_W, cH, KineticTheme.Surface.PANEL_ALT);
-        drawOutwardBorder(g, cX, cY, cH);
+        KineticTheme.separator(g, cX, cY, FRAME_W);
 
         g.scissor(cX + INNER_PADDING, innerY, cX + FRAME_W - gutter - INNER_PADDING, innerY + visiblePixels);
         for (int i = 0; i < lines.size(); i++) {
@@ -253,6 +254,8 @@ public class ChatCopyCanvasPage extends KineticPage {
             return true;
         }
 
+        if (!input.isLeft()) return false;
+
         updateScroll();
         if (scroll.canScroll() && scroll.beginDrag(vMx, vMy, input.button(), cX + FRAME_W - gutter, innerY, gutter, visiblePixels, 15)) {
             isDraggingScrollbar = true;
@@ -325,17 +328,6 @@ public class ChatCopyCanvasPage extends KineticPage {
         KineticTheme.indicatorFill(g, xStart, y - 1, Math.max(1, xEnd - xStart), 10, KineticTheme.Indicator.INFO, 0.40F);
     }
 
-    private void drawOutwardBorder(KineticGraphics g, int x, int y, int h) {
-        KineticTheme.indicatorOutline(
-                g,
-                x - MARGIN,
-                y - MARGIN,
-                FRAME_W + MARGIN * 2,
-                h + MARGIN * 2,
-                KineticTheme.Indicator.WARNING
-        );
-    }
-
     private boolean isWordChar(char c) {
         return Character.isLetterOrDigit(c) || c == '_' || c == '.' || c == ':' || c == '/' || c == '-' || c == '?' || c == '=' || c == '&' || c == '%';
     }
@@ -404,10 +396,11 @@ public class ChatCopyCanvasPage extends KineticPage {
 
     private int getLineIndexAt(double vMx, double vMy) {
         int cX = (width() - FRAME_W) / 2;
-        int cY = 25, cH = height() - 75 + BOTTOM_EXPAND;
+        int innerY = 25 + INNER_PADDING;
         int gutter = SCROLLBAR_WIDTH + SCROLLBAR_MARGIN + 2;
-        if (vMx < cX || vMx > cX + FRAME_W - gutter || vMy < cY || vMy > cY + cH) return -1;
-        double relativeY = vMy - (cY + 2) + visualScroll();
+        if (vMx < cX + INNER_PADDING || vMx >= cX + FRAME_W - gutter - INNER_PADDING
+                || vMy < innerY || vMy >= innerY + visibleLines() * LINE_H) return -1;
+        double relativeY = vMy - innerY + Math.round(visualScroll());
         int idx = (int) Math.floor(relativeY / LINE_H);
         return (idx >= 0 && idx < lines.size()) ? idx : -1;
     }

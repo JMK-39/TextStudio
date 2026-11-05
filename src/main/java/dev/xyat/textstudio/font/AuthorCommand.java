@@ -43,14 +43,12 @@ public class AuthorCommand {
         root.then(Commands.literal("rename").then(Commands.argument("name", StringArgumentType.greedyString()).executes(context -> setName(context, StringArgumentType.getString(context, "name")))));
     }
 
-    private static int sendHelp(CommandSourceStack source) {
+    static int sendHelp(CommandSourceStack source) {
         source.sendSuccess(() -> CommandText.header("cmd.textstudio.font.desc"), false);
         source.sendSuccess(() -> CommandText.suggest(KineticI18n.translatable(LANG_PREFIX + "help.syntax.rename"), "/kt font rename ", LANG_PREFIX + "help.set.desc"), false);
         source.sendSuccess(() -> CommandText.suggest(KineticI18n.translatable(LANG_PREFIX + "help.syntax.effect"), "/kt font name effect ", LANG_PREFIX + "help.effect.desc"), false);
         source.sendSuccess(() -> CommandText.suggest(KineticI18n.translatable(LANG_PREFIX + "help.syntax.toggle"), "/kt font name toggle ", "cmd.textstudio.font.help.switch_hint"), false);
         source.sendSuccess(() -> CommandText.suggest(KineticI18n.translatable(LANG_PREFIX + "help.syntax.clear"), "/kt font name clear", LANG_PREFIX + "help.clear.desc"), false);
-        source.sendSuccess(() -> KineticI18n.translatable("cmd.textstudio.font.help.header"), false);
-        source.sendSuccess(() -> CommandText.suggest(KineticI18n.translatable(LANG_PREFIX + "help.syntax.guide"), "/kt font guide", "cmd.textstudio.font.help.dynamic.desc"), false);
         return 1;
     }
 

@@ -32,8 +32,8 @@ public class FontModule {
             @Override
             public void appendHelpItems(CommandSourceStack source, List<MutableComponent> items) {
                 items.add(CommandText.suggest(
-                        "/kt font",
-                        "/kt font ",
+                        "/kt font name",
+                        "/kt font name ",
                         "cmd.textstudio.font.desc"
                 ));
             }

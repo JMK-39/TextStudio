@@ -21,6 +21,7 @@ import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
 
 import java.util.Arrays;
+import java.util.function.IntFunction;
 
 public final class CompatibleFontRenderer {
     private static final ThreadLocal<RenderContext> CONTEXT = ThreadLocal.withInitial(RenderContext::new);
@@ -199,14 +200,10 @@ public final class CompatibleFontRenderer {
 
         context.buffer.clear();
         context.bufferSink.set(context.buffer);
-        for (int run = 0; run < context.rawText.runCount; run++) {
-            int start = context.rawText.runStarts[run];
-            int end = run + 1 < context.rawText.runCount ? context.rawText.runStarts[run + 1] : context.rawText.text.length();
-            String text = context.rawText.text.substring(start, end);
-            Style baseStyle = context.rawText.runStyles[run];
-            TextProcessor.iterateFormatted(text, 0, baseStyle, baseStyle, context.bufferSink);
-        }
-        return context.buffer.hasTextEffect;
+        TextProcessor.iterateStyled(context.rawText.text.toString(), context.rawText, context.bufferSink);
+        // A valid reset can leave no effects at all; its consumed glyphs still require the parsed output.
+        return context.buffer.hasTextEffect
+                || context.buffer.size < context.rawText.text.codePointCount(0, context.rawText.text.length());
     }
 
     private static boolean effectsDiffer(IStyle.TextEffectStyleData first, IStyle.TextEffectStyleData second) {
@@ -852,15 +849,17 @@ public final class CompatibleFontRenderer {
     }
 
 
-    private static final class RawTextSink implements FormattedCharSink {
+    private static final class RawTextSink implements FormattedCharSink, IntFunction<Style> {
         private final StringBuilder text = new StringBuilder(128);
         private Style[] runStyles = new Style[8];
         private int[] runStarts = new int[8];
         private int runCount;
+        private int currentRun;
 
         private void clear() {
             text.setLength(0);
             runCount = 0;
+            currentRun = 0;
         }
 
         @Override
@@ -873,6 +872,12 @@ public final class CompatibleFontRenderer {
             }
             text.appendCodePoint(codePoint);
             return true;
+        }
+
+        @Override
+        public Style apply(int offset) {
+            while (currentRun + 1 < runCount && runStarts[currentRun + 1] <= offset) currentRun++;
+            return runStyles[currentRun];
         }
 
         private void ensureCapacity(int required) {
@@ -888,7 +893,13 @@ public final class CompatibleFontRenderer {
         }
 
         private static boolean stylesDiffer(Style first, Style second) {
-            return first != second && (first == null || !first.equals(second));
+            if (first == second) return false;
+            if (first == null || !first.equals(second)) return true;
+            IStyle.TextEffectStyleData firstEffect = (Object) first instanceof IStyle effectStyle
+                    ? effectStyle.textstudio_font$getStyleData() : null;
+            IStyle.TextEffectStyleData secondEffect = (Object) second instanceof IStyle effectStyle
+                    ? effectStyle.textstudio_font$getStyleData() : null;
+            return effectsDiffer(firstEffect, secondEffect);
         }
     }
 

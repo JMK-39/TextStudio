@@ -41,30 +41,34 @@ public final class FontModuleConfigPage extends KineticPage {
     private static final int CANVAS_W = 640;
     private static final int CANVAS_H = 360;
 
-    private static final int LIST_X = 8;
-    private static final int LIST_Y = 6;
-    private static final int LIST_W = 120;
-    private static final int LIST_H = 346;
-    private static final int LIST_ROW_H = 18;
+    private static final int LIST_X = 0;
+    private static final int LIST_Y = 0;
+    private static final int LIST_W = 128;
+    private static final int LIST_H = 360;
+    private static final int LIST_ROW_H = 16;
+    private static final int LIST_ROW_GAP = 2;
     private static final int PRESET_SELECTED_OUTLINE = 0xFFFFE600;
     private static final int PRESET_HOVER_OUTLINE = 0xFF55AAFF;
 
-    private static final int PREVIEW_X = 134;
-    private static final int PREVIEW_Y = 6;
-    private static final int PREVIEW_W = 498;
-    private static final int PREVIEW_H = 104;
+    private static final int PREVIEW_X = 132;
+    private static final int PREVIEW_Y = 0;
+    private static final int PREVIEW_W = 508;
+    // The preview area: one row with the text field and every action (Copy, Prefix, Stop, Save at the top right),
+    // then the live preview right under it; the effect editor follows.
+    private static final int PREVIEW_H = 86;
     private static final float PREVIEW_SCALE = 1.45f;
-    private static final int PREVIEW_CONTENT_X = PREVIEW_X + 12;
-    private static final int PREVIEW_CONTENT_Y = PREVIEW_Y + 48;
-    private static final int PREVIEW_CONTENT_W = PREVIEW_W - 30;
-    private static final int PREVIEW_CONTENT_H = PREVIEW_H - 55;
+    private static final int PREVIEW_CONTENT_X = PREVIEW_X + 4;
+    private static final int PREVIEW_CONTENT_Y = PREVIEW_Y + 26;
+    private static final int PREVIEW_CONTENT_W = PREVIEW_W - 16;
+    private static final int PREVIEW_CONTENT_H = PREVIEW_H - 31;
     private static final int PREVIEW_SCROLLBAR_X = PREVIEW_X + PREVIEW_W - 8;
     private static final int PREVIEW_SCROLLBAR_W = 4;
+    private static final int COPY_X = 596 - 4 - 40 - 4 - 40 - 4 - 56, INPUT_W = COPY_X - 4 - (PREVIEW_X + 4);
 
-    private static final int EDITOR_X = 134;
-    private static final int EDITOR_Y = 116;
-    private static final int EDITOR_W = 498;
-    private static final int EDITOR_H = 236;
+    private static final int EDITOR_X = 132;
+    private static final int EDITOR_Y = 90;
+    private static final int EDITOR_W = 508;
+    private static final int EDITOR_H = 270;
 
     private static final int FIELD_COL_1_X = 146;
     private static final int FIELD_COL_2_X = 307;
@@ -75,7 +79,7 @@ public final class FontModuleConfigPage extends KineticPage {
     private static final int FIELD_CONTROL_W = 40;
     private static final int FIELD_H = 14;
     private static final int FIELD_ROW = 18;
-    private static final int FIELD_START_Y = 151;
+    private static final int FIELD_START_Y = EDITOR_Y + 37;
 
     private static final int CATEGORY_X = EDITOR_X + 5;
     private static final int CATEGORY_Y = EDITOR_Y + 6;
@@ -169,6 +173,8 @@ public final class FontModuleConfigPage extends KineticPage {
             draftEffects.add(new AuthorConfig.EffectSettings());
         }
         configureStandaloneDraft(this::captureFontDraftSnapshot, this::restoreFontDraftSnapshot);
+        bindDeleteAction(() -> draftEffects.size() > 1 && selectedPreset >= 0 && selectedPreset < draftEffects.size(),
+                () -> deletePreset(selectedPreset));
     }
 
     @Override
@@ -182,16 +188,16 @@ public final class FontModuleConfigPage extends KineticPage {
                 KineticI18n.translatable("gui.textstudio.font.editor.cancel"),
                 LIST_X + 4,
                 LIST_Y + 4,
-                56,
+                40,
                 18,
                 this::close,
                 KineticI18n.translatable("gui.textstudio.font.editor.tip.cancel")
         );
         addActionButton(
                 KineticI18n.translatable("gui.textstudio.font.editor.save"),
-                572,
+                596,
                 PREVIEW_Y + 4,
-                56,
+                40,
                 18,
                 this::save,
                 KineticI18n.translatable("gui.textstudio.font.editor.tip.save")
@@ -199,17 +205,17 @@ public final class FontModuleConfigPage extends KineticPage {
 
         buildPreviewInput();
         registerTip(
-                PREVIEW_X + 12,
-                PREVIEW_Y + 23,
-                302,
+                PREVIEW_X + 4,
+                PREVIEW_Y + 4,
+                INPUT_W,
                 18,
                 KineticI18n.translatable("gui.textstudio.font.editor.tip.preview_input")
         );
 
         addActionButton(
                 KineticI18n.translatable("gui.textstudio.font.editor.copy"),
-                452,
-                PREVIEW_Y + 26,
+                COPY_X,
+                PREVIEW_Y + 4,
                 56,
                 18,
                 this::copyPreviewText,
@@ -217,18 +223,18 @@ public final class FontModuleConfigPage extends KineticPage {
         );
         addActionButton(
                 KineticI18n.translatable("gui.textstudio.font.editor.copy_prefix"),
-                512,
-                PREVIEW_Y + 26,
-                56,
+                COPY_X + 60,
+                PREVIEW_Y + 4,
+                40,
                 18,
                 this::copyEffectPrefix,
                 KineticI18n.translatable("gui.textstudio.font.editor.tip.copy_prefix")
         );
         addActionButton(
                 KineticI18n.translatable("gui.textstudio.font.editor.copy_stop"),
-                572,
-                PREVIEW_Y + 26,
-                56,
+                COPY_X + 104,
+                PREVIEW_Y + 4,
+                40,
                 18,
                 this::copyEffectStop,
                 KineticI18n.translatable("gui.textstudio.font.editor.tip.copy_stop")
@@ -252,9 +258,9 @@ public final class FontModuleConfigPage extends KineticPage {
 
         KineticButton addPresetButton = addActionButton(
                 KineticI18n.translatable("gui.textstudio.font.editor.preset.add"),
-                LIST_X + 10,
-                LIST_Y + LIST_H - 26,
-                LIST_W - 20,
+                LIST_X + 48,
+                LIST_Y + 4,
+                LIST_W - 52,
                 18,
                 this::addPreset,
                 KineticI18n.translatable("gui.textstudio.font.editor.tip.preset_add")
@@ -271,7 +277,7 @@ public final class FontModuleConfigPage extends KineticPage {
     }
 
     private void buildPreviewInput() {
-        ui().textField(PREVIEW_X + 12, PREVIEW_Y + 23, 302)
+        ui().textField(PREVIEW_X + 4, PREVIEW_Y + 4, INPUT_W)
                 .label(KineticI18n.translatable("gui.textstudio.font.editor.preview.input"))
                 .placeholder(KineticI18n.translatable("gui.textstudio.font.editor.preview.hint"))
                 .maxLength(4096)
@@ -686,9 +692,12 @@ public final class FontModuleConfigPage extends KineticPage {
     @Override
     protected void renderBackground(KineticGraphics graphics, int mouseX, int mouseY, float partialTick) {
         KineticTheme.shadow(graphics, width(), height());
-        KineticTheme.panel(graphics, LIST_X, LIST_Y, LIST_W, LIST_H);
-        KineticTheme.panel(graphics, PREVIEW_X, PREVIEW_Y, PREVIEW_W, PREVIEW_H);
-        KineticTheme.panel(graphics, EDITOR_X, EDITOR_Y, EDITOR_W, EDITOR_H);
+        KineticTheme.panel(graphics, 0, 0, width(), height());
+        KineticTheme.surface(graphics, LIST_X + 1, LIST_Y + 1, LIST_W - 1, LIST_H - 2, KineticTheme.Surface.PANEL_ALT);
+        KineticTheme.surface(graphics, PREVIEW_X, PREVIEW_Y + 1, PREVIEW_W - 1, PREVIEW_H - 1, KineticTheme.Surface.PANEL);
+        KineticTheme.surface(graphics, EDITOR_X, EDITOR_Y, EDITOR_W - 1, EDITOR_H - 1, KineticTheme.Surface.PANEL);
+        KineticTheme.verticalSeparator(graphics, PREVIEW_X - 2, 1, height() - 2);
+        KineticTheme.separator(graphics, PREVIEW_X, EDITOR_Y - 2, PREVIEW_W - 1);
         if (categoryMenuOpen) {
             KineticTheme.panel(graphics, CATEGORY_X, CATEGORY_MENU_Y, CATEGORY_W, CATEGORY_MENU_H);
         }
@@ -696,17 +705,6 @@ public final class FontModuleConfigPage extends KineticPage {
 
     @Override
     protected void renderForeground(KineticGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        graphics.scrollingText(KineticI18n.translatable("gui.textstudio.font.editor.presets"), LIST_X + 64, LIST_Y + 8, LIST_W - 68, 0xFFFFFF, false);
-        graphics.scrollingText(KineticI18n.translatable("gui.textstudio.font.editor.preview.title"), PREVIEW_X + 12, PREVIEW_Y + 8, 80, 0xFFFFFF, false);
-        // Ends 4 px before the Save button at x 572.
-        graphics.scrollingText(
-                KineticI18n.translatable("gui.textstudio.font.editor.preset_selected", selectedPreset + 1),
-                PREVIEW_X + 96,
-                PREVIEW_Y + 8,
-                572 - 4 - (PREVIEW_X + 96),
-                0xFFFFFF,
-                true
-        );
 
         for (FieldLabel label : fieldLabels) {
             graphics.scrollingText(label.component(), label.x(), label.y(), label.maxWidth(), 0xFFFFFF, false);
@@ -717,18 +715,6 @@ public final class FontModuleConfigPage extends KineticPage {
         }
 
         renderPreview(graphics, mouseX, mouseY);
-    }
-
-    private static void renderPresetSwatches(KineticGraphics graphics, AuthorConfig.EffectSettings effect, int x, int y) {
-        List<Integer> colors = parsePalette(effect.paletteColors);
-        if (colors.isEmpty()) {
-            return;
-        }
-        int count = Math.min(3, colors.size());
-        for (int i = 0; i < count; i++) {
-            int color = 0xFF000000 | colors.get(i);
-            KineticTheme.colorSwatch(graphics, x + i * 8, y, 6, 6, color, false);
-        }
     }
 
     private void renderPreview(KineticGraphics graphics, int mouseX, int mouseY) {
@@ -772,9 +758,23 @@ public final class FontModuleConfigPage extends KineticPage {
             return previewLines;
         }
 
+        MutableComponent preview = effectPreviewComponent(effect, selectedPreset + 1, text);
+        int wrapWidth = Math.max(20, (int) ((PREVIEW_CONTENT_W - 6) / PREVIEW_SCALE));
+        previewLines = KineticText.wrap(preview, wrapWidth);
+        if (previewLines.isEmpty()) {
+            previewLines = List.of(Component.literal(" ").getVisualOrderText());
+        }
+        previewLinesText = text;
+        previewLinesPreset = selectedPreset;
+        previewLinesEffect = effect;
+        return previewLines;
+    }
+
+    /** Use the draft itself for both list samples and the larger preview, including unsaved parameter changes. */
+    private static MutableComponent effectPreviewComponent(AuthorConfig.EffectSettings effect, int presetId, String text) {
         Style previewStyle = Style.EMPTY.withColor(TextColor.fromRgb(0xFFFFFF));
         IStyle.TextEffectStyleData data = new IStyle.TextEffectStyleData(
-                selectedPreset + 1,
+                presetId,
                 false,
                 false,
                 false,
@@ -786,16 +786,7 @@ public final class FontModuleConfigPage extends KineticPage {
             effectStyle.textstudio_font$setStyleData(data);
         }
 
-        MutableComponent preview = Component.literal(text).setStyle(previewStyle);
-        int wrapWidth = Math.max(20, (int) ((PREVIEW_CONTENT_W - 6) / PREVIEW_SCALE));
-        previewLines = KineticText.wrap(preview, wrapWidth);
-        if (previewLines.isEmpty()) {
-            previewLines = List.of(Component.literal(" ").getVisualOrderText());
-        }
-        previewLinesText = text;
-        previewLinesPreset = selectedPreset;
-        previewLinesEffect = effect;
-        return previewLines;
+        return Component.literal(text).setStyle(previewStyle);
     }
 
     private void invalidatePreviewLines() {
@@ -945,7 +936,7 @@ public final class FontModuleConfigPage extends KineticPage {
 
     @Override
     protected boolean onMouseScroll(ScrollInput input) {
-        if (input.inside(PREVIEW_X, PREVIEW_Y + 43, PREVIEW_W, PREVIEW_H - 43)) {
+        if (input.inside(PREVIEW_X, PREVIEW_CONTENT_Y - 4, PREVIEW_W, PREVIEW_H - (PREVIEW_CONTENT_Y - 4 - PREVIEW_Y))) {
             previewScroll.scroll(input.deltaY());
             return true;
         }
@@ -1047,24 +1038,29 @@ public final class FontModuleConfigPage extends KineticPage {
     /** 预设列表：只绘制行，滚动、滚动条、中键跳转由核心处理 / Preset list; scrolling and scrollbar are core-owned. */
     private final class PresetList extends KineticRowList<AuthorConfig.EffectSettings> {
         private static final int CONTENT_Y = LIST_Y + 25;
-        private static final int CONTENT_H = LIST_Y + LIST_H - 26 - CONTENT_Y - 5;
+        private static final int CONTENT_H = LIST_Y + LIST_H - CONTENT_Y - 5;
 
         PresetList() {
-            super(LIST_X + 7, CONTENT_Y, LIST_W - 11, CONTENT_H, LIST_ROW_H);
+            super(LIST_X + 4, CONTENT_Y, LIST_W - 8, CONTENT_H, LIST_ROW_H);
         }
 
         @Override
         protected void renderRowBackground(KineticGraphics graphics, int index, int x, int y, int width, int height,
                                            boolean hovered, boolean selected) {
-            KineticTheme.stateSurface(graphics, x, y + 1, width, height - 2, KineticTheme.Surface.PANEL_ALT,
+            KineticTheme.stateSurface(graphics, x, y + LIST_ROW_GAP / 2, width, height - LIST_ROW_GAP, KineticTheme.Surface.PANEL_ALT,
                     selected, hovered, false);
         }
 
         @Override
         protected void renderRow(KineticGraphics graphics, AuthorConfig.EffectSettings effect, int index, int x, int y,
                                  int width, int height, boolean hovered, boolean selected) {
-            graphics.scrollingText(KineticI18n.translatable("gui.textstudio.font.editor.preset", index + 1), x + 4, y + 5, 66, 0xFFFFFF, false);
-            renderPresetSwatches(graphics, effect, x + 71, y + 5);
+            Component number = Component.literal((index + 1) + ". ");
+            int numberWidth = KineticText.width(number);
+            // Vertically centred in the 14 px row surface: 2 px above and below the text.
+            graphics.scrollingText(number, x + 4, y + 4, numberWidth, 0xFFFFFF, false);
+            String name = FontModuleGuidePage.presetName(index).getString();
+            graphics.scrollingText(effectPreviewComponent(effect, index + 1, name),
+                    x + 4 + numberWidth, y + 4, Math.max(0, width - 8 - numberWidth), 0xFFFFFF, false);
         }
 
         @Override

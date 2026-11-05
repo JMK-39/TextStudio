@@ -109,7 +109,8 @@ New-Item -ItemType Directory -Path $mods,$backup -Force | Out-Null
 $loader=$Node.Substring($Node.IndexOf('-')+1)
 $minecraft=$Node.Substring(0,$Node.IndexOf('-'))
 foreach ($id in @('kineticcore',$ModId)) {
-    $artifact=Join-Path $Artifacts "$id-$loader-$minecraft-$Version.jar"
+    # Release jars are kept in one folder per Minecraft version.
+    $artifact=Join-Path (Join-Path $Artifacts $minecraft) "$id-$loader-$minecraft-$Version.jar"
     if (!(Test-Path -LiteralPath $artifact)) { throw "Matching release JAR missing: $artifact" }
     foreach($old in Get-ChildItem -LiteralPath $mods -Filter "*$id*.jar") {
         if($old.Name -eq "$id-validation.jar") { continue }

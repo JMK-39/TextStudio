@@ -1,3 +1,43 @@
+2026年10月24日 — 26.10.24 — Buttons at the top, standard slots / 按钮置顶与统一物品格
+- Font effect editor: the text field, Copy, Prefix, Stop and Save share the top row; the “实时预览” and “ID” labels are gone and the editor moved up; Add Preset sits in the left header; Cancel reads Back.
+- 文字特效编辑：输入框、一键复制、前缀、截断与保存同在顶行；去掉“实时预览”和“ID”文字，编辑区上移；新增预设移到左侧顶栏；“取消”改为“返回”。
+
+2026年10月23日 — List spacing / 列表间距
+
+- The colorful-text editor's effect list centres each name in its row, 2 px from the row's edges.
+- 炫彩文本编辑器的效果列表把名称垂直居中，与行边框上下各留 2 像素。
+
+---
+
+2026年10月20日 — Editor entry / 编辑器入口
+- Chat-copy text selection uses the exact visible content clip, including fractional scrolling, and starts only with the left button. The GUI fixture checks all clipped edges and the first/last visible pixels.
+- 聊天复制文本选择与可见裁剪区域完全一致，平滑滚动时也对齐；仅左键开始拖选，并补充四边裁剪及首末可见像素的界面回归检查。
+
+- Text editors use one white outer frame and gray-white section dividers. Preset rows and popup menus keep their interactive outlines; the chat copy view no longer has a second gold frame.
+- 文本编辑页统一使用白色外框及灰白区域分隔线，预设交互行与弹出菜单保留边框；聊天复制页移除第二层金色边框。
+
+- Open the colorful-text and color-preset editor through F6's TextStudio configuration. Font commands show name-style help and retain rename, effect, toggle and clear operations; editor-opening command aliases were removed.
+
+- 炫彩文本与颜色预设编辑器通过 F6 的 TextStudio 配置打开。字体命令显示名称样式帮助，保留改名、效果、开关及清除操作；移除打开编辑器的命令入口。
+
+---
+
+2026年10月16日 — 编辑画布与预设删除
+
+- 聊天搜索框加宽 40 像素，聊天浏览与字体编辑页使用 640×360 画布及 4 像素返回内距。
+- 字体编辑器可用 Delete 删除当前预设，保留最后一个预设的原有限制。
+- 字体效果与颜色预设左侧列表改为更紧凑的行高，列表按钮间距固定为 2 点，编号保持独立白色显示。
+
+---
+
+2026年10月13日 — Chat copy toolbar background / 聊天复制工具栏背景
+
+- The chat copy canvas's Back button, search field and match buttons sit on the same dark panel as the chat history instead of directly over the world. The match count is vertically centred with the buttons.
+
+- 聊天复制画布的返回按钮、搜索框与匹配切换按钮与聊天记录共用同一深色面板，不再直接显示在游戏画面上；匹配计数与按钮垂直居中。
+
+---
+
 2026年10月10日 — Navigation placement / 返回按钮位置
 
 - Cancel in the font preset editor and Back in the font guide and chat copy canvas now sit at the top left. Preset lists, previews, effect controls and the chat history frame keep their existing layout.

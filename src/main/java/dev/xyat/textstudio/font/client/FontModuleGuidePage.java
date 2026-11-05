@@ -28,15 +28,15 @@ import java.util.List;
 
 /** 字体效果快速指南 / Quick guide for the font effect presets. */
 public final class FontModuleGuidePage extends KineticPage {
-    private static final int LIST_X = 8;
-    private static final int LIST_Y = 8;
-    private static final int LIST_W = 226;
-    private static final int LIST_H = 344;
+    private static final int LIST_X = 0;
+    private static final int LIST_Y = 0;
+    private static final int LIST_W = 234;
+    private static final int LIST_H = 360;
     private static final int ROW_H = 17;
-    private static final int INFO_X = 242;
-    private static final int INFO_Y = 8;
-    private static final int INFO_W = 390;
-    private static final int INFO_H = 344;
+    private static final int INFO_X = 238;
+    private static final int INFO_Y = 0;
+    private static final int INFO_W = 402;
+    private static final int INFO_H = 360;
     private static final int VISIBLE_ROWS = 18;
     private static final float PREVIEW_SCALE = 1.65f;
     private static final int PREVIEW_CONTENT_X = INFO_X + 12;
@@ -68,7 +68,7 @@ public final class FontModuleGuidePage extends KineticPage {
         selectedPreset = Mth.clamp(selectedPreset, 0, Math.max(0, AuthorConfig.EFFECTS.size() - 1));
         if (presetList != null) listScrollOffset = presetList.scrollOffset();
 
-        ui.button(LIST_X + 6, LIST_Y + 6, 64)
+        ui.button(4, 4, 40)
                 .text(KineticI18n.translatable("gui.textstudio.font.guide.back"))
                 .onClick(this::close)
                 .build();
@@ -90,12 +90,12 @@ public final class FontModuleGuidePage extends KineticPage {
                 .tooltip(KineticI18n.translatable("gui.textstudio.font.editor.tip.copy"))
                 .onClick(this::copyCurrent)
                 .build();
-        ui.button(INFO_X + 286, INFO_Y + 52, 44)
+        ui.button(INFO_X + 286, INFO_Y + 52, 40)
                 .text(KineticI18n.translatable("gui.textstudio.font.editor.copy_prefix"))
                 .tooltip(KineticI18n.translatable("gui.textstudio.font.editor.tip.copy_prefix"))
                 .onClick(this::copyPrefix)
                 .build();
-        ui.button(INFO_X + 334, INFO_Y + 52, 44)
+        ui.button(INFO_X + 334, INFO_Y + 52, 40)
                 .text(KineticI18n.translatable("gui.textstudio.font.editor.copy_stop"))
                 .tooltip(KineticI18n.translatable("gui.textstudio.font.editor.tip.copy_stop"))
                 .onClick(this::copyStop)
@@ -118,8 +118,10 @@ public final class FontModuleGuidePage extends KineticPage {
     @Override
     protected void renderBackground(KineticGraphics graphics, int mouseX, int mouseY, float partialTick) {
         KineticTheme.shadow(graphics, width(), height());
-        KineticTheme.panel(graphics, LIST_X, LIST_Y, LIST_W, LIST_H);
-        KineticTheme.panel(graphics, INFO_X, INFO_Y, INFO_W, INFO_H);
+        KineticTheme.panel(graphics, 0, 0, width(), height());
+        KineticTheme.surface(graphics, LIST_X + 1, LIST_Y + 1, LIST_W - 1, LIST_H - 2, KineticTheme.Surface.PANEL_ALT);
+        KineticTheme.surface(graphics, INFO_X, INFO_Y + 1, INFO_W - 1, INFO_H - 2, KineticTheme.Surface.PANEL);
+        KineticTheme.verticalSeparator(graphics, INFO_X - 2, 1, height() - 2);
     }
 
     @Override
@@ -146,7 +148,7 @@ public final class FontModuleGuidePage extends KineticPage {
         drawRightAlignedNote(graphics, "gui.textstudio.font.guide.note4", INFO_Y + 328);
     }
 
-    private static Component presetName(int index) {
+    static Component presetName(int index) {
         String key = "gui.textstudio.font.preset." + (index + 1);
         if (KineticI18n.hasTranslation(key)) {
             return KineticI18n.translatable(key);

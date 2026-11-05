@@ -3,7 +3,6 @@ package dev.xyat.textstudio.font.network;
 import dev.xyat.textstudio.font.api.AuthorAPI;
 import dev.xyat.kineticcore.api.client.gui.KineticGui;
 import dev.xyat.textstudio.font.client.FontModuleConfigPage;
-import dev.xyat.textstudio.font.client.FontModuleGuidePage;
 //? if <26.1 {
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
@@ -31,10 +30,7 @@ public class AuthorNetworkClient {
     }
 
     public static void handleOpenScreen(AuthorNetwork.OpenScreen packet) {
-        if (packet.screen == 1) {
-            KineticGui.openChild(new FontModuleConfigPage());
-        } else {
-            KineticGui.openChild(new FontModuleGuidePage());
-        }
+        // Screen 0 was the guide; keep packets from older servers compatible with the combined editor.
+        KineticGui.openChild(new FontModuleConfigPage());
     }
 }
