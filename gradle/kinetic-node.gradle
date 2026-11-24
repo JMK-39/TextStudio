@@ -263,7 +263,13 @@ tasks.register('checkPackedStyleCodec', JavaExec) {
     classpath = sourceSets.test.runtimeClasspath
     mainClass = 'dev.xyat.textstudio.font.PackedStyleCodecRegression'
 }
-tasks.named('check').configure { dependsOn 'checkPackedStyleCodec' }
+tasks.register('checkSignPaste', JavaExec) {
+    group = 'verification'
+    dependsOn 'testClasses'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'dev.xyat.textstudio.font.SignPasteRegression'
+}
+tasks.named('check').configure { dependsOn 'checkPackedStyleCodec', 'checkSignPaste' }
 
 // Opt-in fixture loaded by the installed NeoForge client; it is never part of the release JAR.
 if (pLoader == 'neoforge') {
@@ -301,7 +307,7 @@ if (project.property('loader') == 'forge') {
     }
     def captureJar = tasks.register('guiCaptureValidationJar', Jar) {
         dependsOn 'testClasses', writeCaptureMetadata
-        from(sourceSets.test.output) { include 'dev/xyat/textstudiovalidation/GuiCaptureValidation*.class', 'dev/xyat/textstudiovalidation/GuiCaptureForgeEntry.class', 'dev/xyat/textstudiovalidation/FontParserRuntimeChecks*.class' }
+        from(sourceSets.test.output) { include 'dev/xyat/textstudiovalidation/GuiCaptureValidation*.class', 'dev/xyat/textstudiovalidation/GuiCaptureForgeEntry.class', 'dev/xyat/textstudiovalidation/FontParserRuntimeChecks*.class', 'dev/xyat/textstudiovalidation/SurfaceEffectValidation*.class' }
         from captureMetadata
         archiveFileName = 'textstudio-gui-capture.jar'
     }

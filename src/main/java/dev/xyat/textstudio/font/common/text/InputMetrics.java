@@ -101,7 +101,13 @@ public final class InputMetrics {
         return out.toString();
     }
 
-    private static int controlEnd(String text, int index) {
+    /** Whether the stop code (the end of every effect) starts at {@code index}. */
+    static boolean isReset(String text, int index) {
+        return text.startsWith(RESET, index);
+    }
+
+    /** Where the effect or stop code starting at {@code index} ends; -1 if none starts there. */
+    static int controlEnd(String text, int index) {
         if (index < 0 || index >= text.length() || text.charAt(index) != '\u2063') {
             return -1;
         }

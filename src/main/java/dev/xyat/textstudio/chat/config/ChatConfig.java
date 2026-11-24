@@ -4,11 +4,12 @@ import com.electronwill.nightconfig.core.file.CommentedFileConfig;
 import com.electronwill.nightconfig.core.io.WritingMode;
 import dev.xyat.textstudio.chat.ChatModule;
 import dev.xyat.textstudio.chat.network.ChatSyncCodec;
-import dev.xyat.kineticcore.api.runtime.KineticPlatform;
+import dev.xyat.kineticcore.api.runtime.KineticPaths;
 import java.nio.file.Path;
 
 public class ChatConfig {
-    private static final Path CONFIG_PATH = KineticPlatform.configDirectory().resolve("kineticcore/chat.toml");
+    private static final String CONFIG_FILE = "kineticcore/textstudio/chat.toml";
+    private static final Path CONFIG_PATH = KineticPaths.configFile(CONFIG_FILE);
     private static CommentedFileConfig configData;
 
     public static int maxChatLength = 16384;
@@ -22,6 +23,8 @@ public class ChatConfig {
 
     public static void load() {
         try {
+            KineticPaths.migrateConfigFile("kineticcore/chat.toml", CONFIG_FILE);
+            KineticPaths.ensureConfigDirectory("kineticcore/textstudio");
             configData = CommentedFileConfig.builder(CONFIG_PATH).sync().preserveInsertionOrder().writingMode(WritingMode.REPLACE).build();
             configData.load();
             setupConfig();

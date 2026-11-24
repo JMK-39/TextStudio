@@ -1,3 +1,15 @@
+2026年11月9日 — 26.11.9 — Effects on signs and in books, pasting long text on signs, one list of effect settings / 告示牌与书中的特效、告示牌粘贴长文本、特效设置合为一个列表
+- Effect text keeps its effect on every line of a book: a page that wraps, in a book being written or a signed one, no longer drops the effect after its first line. This also holds where ModernUI lays the text out (1.20.1).
+- 书中的特效文字每一行都保留特效：书与笔和已署名的书里换行的页面，第二行起不再丢失特效；装有 ModernUI 时（1.20.1）同样有效。
+- Glowing signs (glow ink) show effect text, each letter with the sign's outline; plain signs already did.
+- 发光告示牌（荧光墨囊）也显示特效文字，每个字带告示牌的描边；普通告示牌此前已支持。
+- Multi-line text fields (among them the 1.21 and later book editor) keep the effect on every line and on both sides of the cursor.
+- 多行输入框（包括 1.21 之后的书本编辑界面）每一行以及光标前后的文字都保留特效。
+- Text too long for a sign's line can be pasted: the line takes what fits and the rest wraps onto the empty lines below it, each keeping the effect; what the sign has no room for is dropped. Lines that already hold text are not written over, Latin words are not split, and Chinese punctuation does not start a line.
+- 告示牌可以粘贴超过一行长度的文字：当前行放得下多少就粘贴多少，其余的自动换到下面的空行，每行都保留特效；整块告示牌放不下的部分不再粘贴。已有文字的行不会被覆盖，英文不会从单词中间断开，中文标点不会出现在行首。
+- The effect editor shows every effect setting in one list, category after category under its title, scrolled smoothly with the mouse wheel or the scrollbar on its right, rows sliding in and out at the edges; the category menu is gone. Each effect's settings sit indented beneath its switch, in three aligned columns.
+- 特效编辑器把所有效果设置排成一个列表，各分类依次排列、带标题，用滚轮或右侧的滚动条平滑浏览，行在边缘自然滑入滑出，不再有分类菜单。每种效果的参数缩进排在它的开关下面，分三列对齐。
+
 2026年10月24日 — 26.10.24 — Buttons at the top, standard slots / 按钮置顶与统一物品格
 - Font effect editor: the text field, Copy, Prefix, Stop and Save share the top row; the “实时预览” and “ID” labels are gone and the editor moved up; Add Preset sits in the left header; Cancel reads Back.
 - 文字特效编辑：输入框、一键复制、前缀、截断与保存同在顶行；去掉“实时预览”和“ID”文字，编辑区上移；新增预设移到左侧顶栏；“取消”改为“返回”。

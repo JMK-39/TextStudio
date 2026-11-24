@@ -5,9 +5,8 @@ import com.electronwill.nightconfig.core.io.WritingMode;
 import dev.xyat.textstudio.font.FontModule;
 import dev.xyat.textstudio.font.api.AuthorAPI;
 import dev.xyat.textstudio.font.common.annotation.KTModule;
-import dev.xyat.kineticcore.api.runtime.KineticPlatform;
+import dev.xyat.kineticcore.api.runtime.KineticPaths;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -15,8 +14,9 @@ import java.util.function.Consumer;
 
 @KTModule
 public class AuthorConfig {
-    private static final Path CONFIG_DIR = KineticPlatform.configDirectory().resolve("kineticcore");
-    private static final Path FILE_PATH = CONFIG_DIR.resolve("textstudio_effects.toml");
+    private static final String CONFIG_DIR = "kineticcore/textstudio";
+    private static final String CONFIG_FILE = CONFIG_DIR + "/textstudio_effects.toml";
+    private static final Path FILE_PATH = KineticPaths.configFile(CONFIG_FILE);
     private static CommentedFileConfig configData;
     private static int refreshIntervalMs = 33;
     private static int maxAnimatedGlyphs = 512;
@@ -121,7 +121,8 @@ public class AuthorConfig {
 
     public static void load() {
         try {
-            if (!Files.exists(CONFIG_DIR)) Files.createDirectories(CONFIG_DIR);
+            KineticPaths.migrateConfigFile("kineticcore/textstudio_effects.toml", CONFIG_FILE);
+            KineticPaths.ensureConfigDirectory(CONFIG_DIR);
             configData = CommentedFileConfig.builder(FILE_PATH).sync().preserveInsertionOrder().writingMode(WritingMode.REPLACE).build();
             configData.load();
             if (!configData.contains("e")) {

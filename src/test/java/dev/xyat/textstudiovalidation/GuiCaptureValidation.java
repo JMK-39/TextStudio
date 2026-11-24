@@ -34,7 +34,12 @@ public final class GuiCaptureValidation {
     private static Language stressOriginal;
     private static Throwable openFailure;
 
-    public static void install() { if(installed)return;installed=true;KineticClientEvents.onTick(KineticClientEvents.TickPhase.END,GuiCaptureValidation::tick); }
+    public static void install() {
+        if(installed)return;installed=true;
+        // Effect text on signs and in books runs on its own, in place of the editor captures.
+        if(Boolean.getBoolean("textstudio.surfaceValidation")){SurfaceEffectValidation.install();return;}
+        KineticClientEvents.onTick(KineticClientEvents.TickPhase.END,GuiCaptureValidation::tick);
+    }
     private static void tick() {
         if(finished)return;
         try {

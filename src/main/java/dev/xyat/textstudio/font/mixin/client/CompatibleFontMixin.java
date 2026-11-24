@@ -55,6 +55,19 @@ public abstract class CompatibleFontMixin {
         }
     }
 
+    // Glowing sign text: effect glyphs keep the outline vanilla draws around each one.
+    @Inject(
+            method = "drawInBatch8xOutline(Lnet/minecraft/util/FormattedCharSequence;FFIILorg/joml/Matrix4fc;Lnet/minecraft/client/renderer/MultiBufferSource;I)V",
+            at = @At("HEAD"),
+            cancellable = true
+    )
+    private void textstudio_font$outlined(FormattedCharSequence sequence, float x, float y, int color, int outlineColor, org.joml.Matrix4fc matrix,
+                                          MultiBufferSource buffers, int packedLight, org.spongepowered.asm.mixin.injection.callback.CallbackInfo ci) {
+        if (CompatibleFontRenderer.tryRenderOutlined((Font) (Object) this, sequence, x, y, color, outlineColor, matrix, buffers, packedLight)) {
+            ci.cancel();
+        }
+    }
+
     @Inject(method = "width(Ljava/lang/String;)I", at = @At("HEAD"), cancellable = true)
     private void textstudio_font$widthString(String text, CallbackInfoReturnable<Integer> cir) {
         Integer result = CompatibleFontRenderer.tryMeasureString((Font) (Object) this, text);
@@ -218,6 +231,19 @@ public abstract class CompatibleFontMixin {
             cir.setReturnValue(result);
         }
     }
+    // Glowing sign text: effect glyphs keep the outline vanilla draws around each one.
+    @Inject(
+            method = "drawInBatch8xOutline(Lnet/minecraft/util/FormattedCharSequence;FFIILorg/joml/Matrix4f;Lnet/minecraft/client/renderer/MultiBufferSource;I)V",
+            at = @At("HEAD"),
+            cancellable = true
+    )
+    private void textstudio_font$outlined(FormattedCharSequence sequence, float x, float y, int color, int outlineColor, Matrix4f matrix,
+                                          MultiBufferSource buffers, int packedLight, org.spongepowered.asm.mixin.injection.callback.CallbackInfo ci) {
+        if (CompatibleFontRenderer.tryRenderOutlined((Font) (Object) this, sequence, x, y, color, outlineColor, matrix, buffers, packedLight)) {
+            ci.cancel();
+        }
+    }
+
     @Inject(
             method = "width(Ljava/lang/String;)I",
             at = @At("HEAD"),

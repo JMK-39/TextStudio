@@ -79,19 +79,22 @@ public final class FontModuleConfigPage extends KineticPage {
     private static final int FIELD_CONTROL_W = 40;
     private static final int FIELD_H = 14;
     private static final int FIELD_ROW = 18;
-    private static final int FIELD_START_Y = EDITOR_Y + 37;
+    // An effect's own settings sit this far right of its switch; effects in a column are this much further apart.
+    private static final int GROUP_INDENT = 10;
+    private static final int GROUP_GAP = 4;
 
-    private static final int CATEGORY_X = EDITOR_X + 5;
-    private static final int CATEGORY_Y = EDITOR_Y + 6;
-    private static final int CATEGORY_W = 178;
-    private static final int CATEGORY_H = 18;
-    private static final int CATEGORY_MENU_Y = CATEGORY_Y + CATEGORY_H + 2;
-    private static final int CATEGORY_MENU_ROW_H = 20;
-    private static final int CATEGORY_MENU_VISIBLE_ROWS = EditorTab.values().length;
-    private static final int CATEGORY_MENU_H = CATEGORY_MENU_ROW_H * CATEGORY_MENU_VISIBLE_ROWS + 4;
+    // Every effect setting in one list that scrolls (wheel or the scrollbar at its right edge, lined up with the
+    // preview's), category after category; rows slide in and out cut at the list's edges.
+    private static final int SETTINGS_TOP = EDITOR_Y + 4;
+    private static final int SETTINGS_BOTTOM = EDITOR_Y + EDITOR_H - 4;
+    private static final int SETTINGS_SCROLLBAR_X = EDITOR_X + EDITOR_W - 8;
+    private static final int SETTINGS_SCROLLBAR_W = 4;
+    private static final int SETTINGS_WHEEL_STEP = 36;
+    private static final int SECTION_HEADING_H = 14;
+    private static final int SECTION_GAP = 10;
+    private static final int SECTION_HEADING_COLOR = 0xFFFFAA00;
 
     private static final int PALETTE_SWATCH_X = 307;
-    private static final int PALETTE_SWATCH_Y = 226;
     private static final int PALETTE_SWATCH_CELL = 14;
     private static final int PALETTE_SWATCH_GAP = 3;
     private static final int PALETTE_SWATCH_COLS = 12;
@@ -101,7 +104,7 @@ public final class FontModuleConfigPage extends KineticPage {
     private static final int CONTEXT_W = 112;
     private static final int CONTEXT_ROW_H = 18;
 
-    private enum EditorTab {
+    private enum Section {
         COLOR,
         MOTION,
         SPECIAL,
@@ -110,19 +113,32 @@ public final class FontModuleConfigPage extends KineticPage {
         PALETTE
     }
 
-    // maxWidth is the room before the next control; longer (usually English) labels scroll instead of overlapping it.
+    // A setting's label on its row (y is the row's place in the settings list). maxWidth is the room before the
+    // control; longer (usually English) labels scroll instead of overlapping it.
     private record FieldLabel(Component component, int x, int y, int maxWidth) {
     }
 
-    private record HoverTip(int x, int y, int w, int h, Component text) {
+    // inList: y is a place in the settings list, which scrolls; otherwise a place on the page.
+    private record HoverTip(int x, int y, int w, int h, Component text, boolean inList) {
+    }
+
+    private record SectionHeading(Component title, int y) {
     }
 
     private final List<AuthorConfig.EffectSettings> draftEffects = new ArrayList<>();
     private final List<FieldLabel> fieldLabels = new ArrayList<>();
     private final List<HoverTip> hoverTips = new ArrayList<>();
-
-    private EditorTab tab = EditorTab.COLOR;
-    private boolean categoryMenuOpen;
+    // Builds the list's controls: the core cuts them at the list's edges and moves them with the scroll.
+    private KineticUi listUi;
+    private final List<SectionHeading> sectionHeadings = new ArrayList<>();
+    private final java.util.EnumMap<Section, Integer> sectionTops = new java.util.EnumMap<>(Section.class);
+    private final KineticScrollController settingsScroll = new KineticScrollController();
+    private boolean settingsScrollbarDragging;
+    private int sectionTop;
+    private int sectionBottom;
+    private int paletteSwatchY;
+    private int layoutColumn;
+    private int layoutY;
     private int selectedPreset;
     private int presetScrollOffset;
     private boolean revealSelectedPreset;
@@ -181,6 +197,7 @@ public final class FontModuleConfigPage extends KineticPage {
     protected void build(KineticUi ui) {
         fieldLabels.clear();
         hoverTips.clear();
+        sectionHeadings.clear();
         selectedPreset = Mth.clamp(selectedPreset, 0, draftEffects.size() - 1);
         if (presetList != null && presetScrollOffset != Integer.MAX_VALUE) presetScrollOffset = presetList.scrollOffset();
 
@@ -240,21 +257,7 @@ public final class FontModuleConfigPage extends KineticPage {
                 KineticI18n.translatable("gui.textstudio.font.editor.tip.copy_stop")
         );
 
-        addActionButton(
-                KineticI18n.translatable("gui.textstudio.font.editor.category.current", tabLabel(tab)),
-                CATEGORY_X,
-                CATEGORY_Y,
-                CATEGORY_W,
-                CATEGORY_H,
-                this::toggleCategoryMenu,
-                KineticI18n.translatable("gui.textstudio.font.editor.tip.category_selector")
-        );
-
-        if (categoryMenuOpen) {
-            buildCategoryMenuButtons();
-        } else {
-            buildCurrentTab();
-        }
+        buildSettings();
 
         KineticButton addPresetButton = addActionButton(
                 KineticI18n.translatable("gui.textstudio.font.editor.preset.add"),
@@ -290,7 +293,7 @@ public final class FontModuleConfigPage extends KineticPage {
                 .firstShownTextAsDefault().build();
     }
 
-    private Component tabLabel(EditorTab value) {
+    private Component sectionLabel(Section value) {
         return switch (value) {
             case COLOR -> KineticI18n.translatable("gui.textstudio.font.editor.tab.color");
             case MOTION -> KineticI18n.translatable("gui.textstudio.font.editor.tab.motion");
@@ -301,52 +304,62 @@ public final class FontModuleConfigPage extends KineticPage {
         };
     }
 
-    private void toggleCategoryMenu() {
-        categoryMenuOpen = !categoryMenuOpen;
-        closeContextMenu();
-        rebuild();
-    }
-
-    private void buildCategoryMenuButtons() {
-        EditorTab[] values = EditorTab.values();
-        for (int i = 0; i < values.length; i++) {
-            EditorTab target = values[i];
-            addActionButton(
-                    tabLabel(target),
-                    CATEGORY_X + 3,
-                    CATEGORY_MENU_Y + 2 + i * CATEGORY_MENU_ROW_H,
-                    CATEGORY_W - 6,
-                    18,
-                    () -> selectCategory(target),
-                    KineticI18n.translatable("gui.textstudio.font.editor.tip.tab", tabLabel(target))
-            );
-        }
-    }
-
-    private void selectCategory(EditorTab next) {
-        tab = next;
-        categoryMenuOpen = false;
-        closeContextMenu();
-        rebuild();
-    }
-
     private KineticButton addActionButton(Component text, int x, int y, int w, int h, Runnable action, Component tip) {
-        return ui().button(x, y, w).text(text).tooltip(tip).compact().onClick(action).build();
+        return addActionButton(ui(), text, x, y, w, action, tip);
+    }
+
+    private static KineticButton addActionButton(KineticUi ui, Component text, int x, int y, int w, Runnable action, Component tip) {
+        return ui.button(x, y, w).text(text).tooltip(tip).compact().onClick(action).build();
     }
 
     private void registerTip(int x, int y, int w, int h, Component tip) {
-        hoverTips.add(new HoverTip(x, y, w, h, tip));
+        hoverTips.add(new HoverTip(x, y, w, h, tip, false));
     }
 
-    private void buildCurrentTab() {
-        switch (tab) {
-            case COLOR -> buildColorTab();
-            case MOTION -> buildMotionTab();
-            case SPECIAL -> buildSpecialTab();
-            case GLYPH -> buildGlyphTab();
-            case VISUAL -> buildVisualTab();
-            case PALETTE -> buildPaletteTab();
+    /** A tip over a place in the settings list. */
+    private void registerListTip(int x, int y, int w, int h, Component tip) {
+        hoverTips.add(new HoverTip(x, y, w, h, tip, true));
+    }
+
+    /** Every category's settings, one under the other, each under its title. */
+    private void buildSettings() {
+        listUi = ui().scrollViewport(EDITOR_X, SETTINGS_TOP, SETTINGS_SCROLLBAR_X - 2, SETTINGS_BOTTOM, settingsScroll::smoothOffset);
+        int top = 0;
+        for (Section section : Section.values()) {
+            sectionTops.put(section, top);
+            sectionHeadings.add(new SectionHeading(sectionLabel(section), top));
+            sectionTop = top + SECTION_HEADING_H;
+            sectionBottom = sectionTop;
+            switch (section) {
+                case COLOR -> buildColorSection();
+                case MOTION -> buildMotionSection();
+                case SPECIAL -> buildSpecialSection();
+                case GLYPH -> buildGlyphSection();
+                case VISUAL -> buildVisualSection();
+                case PALETTE -> buildPaletteSection();
+            }
+            top = sectionBottom + SECTION_GAP;
         }
+        settingsScroll.updateContent(top - SECTION_GAP, SETTINGS_BOTTOM - SETTINGS_TOP, 1);
+    }
+
+    /** Scrolls the list so a category's title is at its top. */
+    private void revealSection(Section section) {
+        settingsScroll.setOffset(sectionTops.getOrDefault(section, 0));
+    }
+
+    private int listScroll() {
+        return (int) Math.round(settingsScroll.smoothOffset());
+    }
+
+    /** Where a place in the settings list is on the page. */
+    private int listY(int y) {
+        return SETTINGS_TOP + y - listScroll();
+    }
+
+    /** Whether the point is over the visible part of the settings list. */
+    private static boolean overList(double mouseX, double mouseY) {
+        return mouseX >= EDITOR_X && mouseX < SETTINGS_SCROLLBAR_X - 2 && mouseY >= SETTINGS_TOP && mouseY < SETTINGS_BOTTOM;
     }
 
     private int fieldX(int column) {
@@ -357,171 +370,211 @@ public final class FontModuleConfigPage extends KineticPage {
         };
     }
 
-    private int fieldY(int row) {
-        return FIELD_START_Y + FIELD_ROW * row;
+    private void buildColorSection() {
+        AuthorConfig.EffectSettings s = current();
+        beginColumns();
+        effect("cfg.textstudio.font.author.use_rainbow", () -> s.useRainbow, v -> s.useRainbow = v);
+        option("cfg.textstudio.font.author.rainbow_speed", () -> s.rainbowSpeed, v -> s.rainbowSpeed = v, 0.0, 100.0);
+        option("cfg.textstudio.font.author.rainbow_spread", () -> s.rainbowSpread, v -> s.rainbowSpread = v, 0.0, 10.0);
+        effect("cfg.textstudio.font.author.pulse", () -> s.pulse, v -> s.pulse = v);
+        option("cfg.textstudio.font.author.pulse_base", () -> s.pulseBase, v -> s.pulseBase = v, 0.0, 10.0);
+        option("cfg.textstudio.font.author.pulse_amp", () -> s.pulseAmp, v -> s.pulseAmp = v, 0.0, 20.0);
+        option("cfg.textstudio.font.author.pulse_speed", () -> s.pulseSpeed, v -> s.pulseSpeed = v, 0.0, 100.0);
+        nextColumn();
+        effect("cfg.textstudio.font.author.fade", () -> s.fade, v -> s.fade = v);
+        option("cfg.textstudio.font.author.fade_min", () -> s.fadeMin, v -> s.fadeMin = v, 0.0, 1.0);
+        option("cfg.textstudio.font.author.fade_speed", () -> s.fadeSpeed, v -> s.fadeSpeed = v, 0.0, 100.0);
+        effect("cfg.textstudio.font.author.neon_flicker", () -> s.neonFlicker, v -> s.neonFlicker = v);
+        option("cfg.textstudio.font.author.neon_flicker_speed", () -> s.neonFlickerSpeed, v -> s.neonFlickerSpeed = v, 0.0, 100.0);
+        effect("cfg.textstudio.font.author.chromatic", () -> s.chromatic, v -> s.chromatic = v);
+        optionToggle("cfg.textstudio.font.author.chromatic_pulse", () -> s.chromaticPulse, v -> s.chromaticPulse = v);
+        option("cfg.textstudio.font.author.chromatic_offset", () -> s.chromaticOffset, v -> s.chromaticOffset = v, 0.0, 30.0);
+        option("cfg.textstudio.font.author.chromatic_alpha", () -> s.chromaticAlpha, v -> s.chromaticAlpha = v, 0.0, 1.0);
+        nextColumn();
+        effect("cfg.textstudio.font.author.shimmer", () -> s.shimmer, v -> s.shimmer = v);
+        option("cfg.textstudio.font.author.shimmer_width", () -> s.shimmerWidth, v -> s.shimmerWidth = v, 0.25, 10.0);
+        option("cfg.textstudio.font.author.shimmer_strength", () -> s.shimmerStrength, v -> s.shimmerStrength = v, 0.0, 1.0);
+        option("cfg.textstudio.font.author.shimmer_speed", () -> s.shimmerSpeed, v -> s.shimmerSpeed = v, 0.05, 20.0);
+        effect("cfg.textstudio.font.author.sparkle", () -> s.sparkle, v -> s.sparkle = v);
+        option("cfg.textstudio.font.author.sparkle_strength", () -> s.sparkleStrength, v -> s.sparkleStrength = v, 0.0, 1.0);
+        option("cfg.textstudio.font.author.sparkle_chance", () -> s.sparkleChance, v -> s.sparkleChance = v, 0.0, 1.0);
+        option("cfg.textstudio.font.author.sparkle_speed", () -> s.sparkleSpeed, v -> s.sparkleSpeed = v, 0.05, 20.0);
     }
 
-    private void buildColorTab() {
+    private void buildMotionSection() {
         AuthorConfig.EffectSettings s = current();
-
-        addToggle("cfg.textstudio.font.author.use_rainbow", fieldX(0), fieldY(0), () -> s.useRainbow, v -> s.useRainbow = v);
-        addNumber("cfg.textstudio.font.author.rainbow_speed", fieldX(1), fieldY(0), () -> s.rainbowSpeed, v -> s.rainbowSpeed = v, 0.0, 100.0);
-        addNumber("cfg.textstudio.font.author.rainbow_spread", fieldX(2), fieldY(0), () -> s.rainbowSpread, v -> s.rainbowSpread = v, 0.0, 10.0);
-        addToggle("cfg.textstudio.font.author.pulse", fieldX(0), fieldY(1), () -> s.pulse, v -> s.pulse = v);
-        addNumber("cfg.textstudio.font.author.pulse_base", fieldX(1), fieldY(1), () -> s.pulseBase, v -> s.pulseBase = v, 0.0, 10.0);
-        addNumber("cfg.textstudio.font.author.pulse_amp", fieldX(2), fieldY(1), () -> s.pulseAmp, v -> s.pulseAmp = v, 0.0, 20.0);
-        addNumber("cfg.textstudio.font.author.pulse_speed", fieldX(0), fieldY(2), () -> s.pulseSpeed, v -> s.pulseSpeed = v, 0.0, 100.0);
-        addToggle("cfg.textstudio.font.author.fade", fieldX(1), fieldY(2), () -> s.fade, v -> s.fade = v);
-        addNumber("cfg.textstudio.font.author.fade_min", fieldX(2), fieldY(2), () -> s.fadeMin, v -> s.fadeMin = v, 0.0, 1.0);
-        addNumber("cfg.textstudio.font.author.fade_speed", fieldX(0), fieldY(3), () -> s.fadeSpeed, v -> s.fadeSpeed = v, 0.0, 100.0);
-        addToggle("cfg.textstudio.font.author.neon_flicker", fieldX(1), fieldY(3), () -> s.neonFlicker, v -> s.neonFlicker = v);
-        addNumber("cfg.textstudio.font.author.neon_flicker_speed", fieldX(2), fieldY(3), () -> s.neonFlickerSpeed, v -> s.neonFlickerSpeed = v, 0.0, 100.0);
-        addToggle("cfg.textstudio.font.author.chromatic", fieldX(0), fieldY(4), () -> s.chromatic, v -> s.chromatic = v);
-        addNumber("cfg.textstudio.font.author.chromatic_offset", fieldX(1), fieldY(4), () -> s.chromaticOffset, v -> s.chromaticOffset = v, 0.0, 30.0);
-        addNumber("cfg.textstudio.font.author.chromatic_alpha", fieldX(2), fieldY(4), () -> s.chromaticAlpha, v -> s.chromaticAlpha = v, 0.0, 1.0);
-        addToggle("cfg.textstudio.font.author.chromatic_pulse", fieldX(0), fieldY(5), () -> s.chromaticPulse, v -> s.chromaticPulse = v);
-        addToggle("cfg.textstudio.font.author.shimmer", fieldX(1), fieldY(5), () -> s.shimmer, v -> s.shimmer = v);
-        addNumber("cfg.textstudio.font.author.shimmer_speed", fieldX(2), fieldY(5), () -> s.shimmerSpeed, v -> s.shimmerSpeed = v, 0.05, 20.0);
-        addNumber("cfg.textstudio.font.author.shimmer_width", fieldX(0), fieldY(6), () -> s.shimmerWidth, v -> s.shimmerWidth = v, 0.25, 10.0);
-        addNumber("cfg.textstudio.font.author.shimmer_strength", fieldX(1), fieldY(6), () -> s.shimmerStrength, v -> s.shimmerStrength = v, 0.0, 1.0);
-        addToggle("cfg.textstudio.font.author.sparkle", fieldX(2), fieldY(6), () -> s.sparkle, v -> s.sparkle = v);
-        addNumber("cfg.textstudio.font.author.sparkle_speed", fieldX(0), fieldY(7), () -> s.sparkleSpeed, v -> s.sparkleSpeed = v, 0.05, 20.0);
-        addNumber("cfg.textstudio.font.author.sparkle_chance", fieldX(1), fieldY(7), () -> s.sparkleChance, v -> s.sparkleChance = v, 0.0, 1.0);
-        addNumber("cfg.textstudio.font.author.sparkle_strength", fieldX(2), fieldY(7), () -> s.sparkleStrength, v -> s.sparkleStrength = v, 0.0, 1.0);
+        beginColumns();
+        effect("cfg.textstudio.font.author.wave", () -> s.wave, v -> s.wave = v);
+        option("cfg.textstudio.font.author.wave_amp", () -> s.waveAmp, v -> s.waveAmp = v, 0.0, 100.0);
+        option("cfg.textstudio.font.author.wave_speed", () -> s.waveSpeed, v -> s.waveSpeed = v, 0.0, 100.0);
+        effect("cfg.textstudio.font.author.bounce", () -> s.bounce, v -> s.bounce = v);
+        option("cfg.textstudio.font.author.bounce_amp", () -> s.bounceAmp, v -> s.bounceAmp = v, 0.0, 100.0);
+        option("cfg.textstudio.font.author.bounce_speed", () -> s.bounceSpeed, v -> s.bounceSpeed = v, 0.0, 100.0);
+        effect("cfg.textstudio.font.author.shake", () -> s.shake, v -> s.shake = v);
+        option("cfg.textstudio.font.author.shake_amp", () -> s.shakeAmp, v -> s.shakeAmp = v, 0.0, 100.0);
+        option("cfg.textstudio.font.author.shake_speed", () -> s.shakeSpeed, v -> s.shakeSpeed = v, 0.0, 100.0);
+        effect("cfg.textstudio.font.author.swing", () -> s.swing, v -> s.swing = v);
+        option("cfg.textstudio.font.author.swing_amp", () -> s.swingAmp, v -> s.swingAmp = v, 0.0, 100.0);
+        option("cfg.textstudio.font.author.swing_speed", () -> s.swingSpeed, v -> s.swingSpeed = v, 0.0, 100.0);
+        nextColumn();
+        effect("cfg.textstudio.font.author.wiggle", () -> s.wiggle, v -> s.wiggle = v);
+        option("cfg.textstudio.font.author.wiggle_amp", () -> s.wiggleAmp, v -> s.wiggleAmp = v, 0.0, 100.0);
+        option("cfg.textstudio.font.author.wiggle_speed", () -> s.wiggleSpeed, v -> s.wiggleSpeed = v, 0.0, 100.0);
+        effect("cfg.textstudio.font.author.turb", () -> s.turb, v -> s.turb = v);
+        option("cfg.textstudio.font.author.turb_amp", () -> s.turbAmp, v -> s.turbAmp = v, 0.0, 100.0);
+        option("cfg.textstudio.font.author.turb_speed", () -> s.turbSpeed, v -> s.turbSpeed = v, 0.0, 100.0);
+        effect("cfg.textstudio.font.author.pend", () -> s.pend, v -> s.pend = v);
+        option("cfg.textstudio.font.author.pend_amp", () -> s.pendAmp, v -> s.pendAmp = v, 0.0, 100.0);
+        option("cfg.textstudio.font.author.pend_speed", () -> s.pendSpeed, v -> s.pendSpeed = v, 0.0, 100.0);
+        nextColumn();
+        effect("cfg.textstudio.font.author.orbit", () -> s.orbit, v -> s.orbit = v);
+        option("cfg.textstudio.font.author.orbit_amp", () -> s.orbitAmp, v -> s.orbitAmp = v, 0.0, 20.0);
+        option("cfg.textstudio.font.author.orbit_speed", () -> s.orbitSpeed, v -> s.orbitSpeed = v, 0.05, 20.0);
+        effect("cfg.textstudio.font.author.ripple", () -> s.ripple, v -> s.ripple = v);
+        option("cfg.textstudio.font.author.ripple_amp", () -> s.rippleAmp, v -> s.rippleAmp = v, 0.0, 20.0);
+        option("cfg.textstudio.font.author.ripple_speed", () -> s.rippleSpeed, v -> s.rippleSpeed = v, 0.05, 20.0);
+        effect("cfg.textstudio.font.author.drift", () -> s.drift, v -> s.drift = v);
+        option("cfg.textstudio.font.author.drift_amp", () -> s.driftAmp, v -> s.driftAmp = v, 0.0, 20.0);
+        option("cfg.textstudio.font.author.drift_speed", () -> s.driftSpeed, v -> s.driftSpeed = v, 0.05, 20.0);
     }
 
-    private void buildMotionTab() {
+    private void buildSpecialSection() {
         AuthorConfig.EffectSettings s = current();
-
-        addToggle("cfg.textstudio.font.author.wave", fieldX(0), fieldY(0), () -> s.wave, v -> s.wave = v);
-        addNumber("cfg.textstudio.font.author.wave_amp", fieldX(1), fieldY(0), () -> s.waveAmp, v -> s.waveAmp = v, 0.0, 100.0);
-        addNumber("cfg.textstudio.font.author.wave_speed", fieldX(2), fieldY(0), () -> s.waveSpeed, v -> s.waveSpeed = v, 0.0, 100.0);
-        addToggle("cfg.textstudio.font.author.bounce", fieldX(0), fieldY(1), () -> s.bounce, v -> s.bounce = v);
-        addNumber("cfg.textstudio.font.author.bounce_amp", fieldX(1), fieldY(1), () -> s.bounceAmp, v -> s.bounceAmp = v, 0.0, 100.0);
-        addNumber("cfg.textstudio.font.author.bounce_speed", fieldX(2), fieldY(1), () -> s.bounceSpeed, v -> s.bounceSpeed = v, 0.0, 100.0);
-        addToggle("cfg.textstudio.font.author.shake", fieldX(0), fieldY(2), () -> s.shake, v -> s.shake = v);
-        addNumber("cfg.textstudio.font.author.shake_amp", fieldX(1), fieldY(2), () -> s.shakeAmp, v -> s.shakeAmp = v, 0.0, 100.0);
-        addNumber("cfg.textstudio.font.author.shake_speed", fieldX(2), fieldY(2), () -> s.shakeSpeed, v -> s.shakeSpeed = v, 0.0, 100.0);
-        addToggle("cfg.textstudio.font.author.swing", fieldX(0), fieldY(3), () -> s.swing, v -> s.swing = v);
-        addNumber("cfg.textstudio.font.author.swing_amp", fieldX(1), fieldY(3), () -> s.swingAmp, v -> s.swingAmp = v, 0.0, 100.0);
-        addNumber("cfg.textstudio.font.author.swing_speed", fieldX(2), fieldY(3), () -> s.swingSpeed, v -> s.swingSpeed = v, 0.0, 100.0);
-        addToggle("cfg.textstudio.font.author.wiggle", fieldX(0), fieldY(4), () -> s.wiggle, v -> s.wiggle = v);
-        addNumber("cfg.textstudio.font.author.wiggle_amp", fieldX(1), fieldY(4), () -> s.wiggleAmp, v -> s.wiggleAmp = v, 0.0, 100.0);
-        addNumber("cfg.textstudio.font.author.wiggle_speed", fieldX(2), fieldY(4), () -> s.wiggleSpeed, v -> s.wiggleSpeed = v, 0.0, 100.0);
-        addToggle("cfg.textstudio.font.author.turb", fieldX(0), fieldY(5), () -> s.turb, v -> s.turb = v);
-        addNumber("cfg.textstudio.font.author.turb_amp", fieldX(1), fieldY(5), () -> s.turbAmp, v -> s.turbAmp = v, 0.0, 100.0);
-        addNumber("cfg.textstudio.font.author.turb_speed", fieldX(2), fieldY(5), () -> s.turbSpeed, v -> s.turbSpeed = v, 0.0, 100.0);
-        addToggle("cfg.textstudio.font.author.pend", fieldX(0), fieldY(6), () -> s.pend, v -> s.pend = v);
-        addNumber("cfg.textstudio.font.author.pend_amp", fieldX(1), fieldY(6), () -> s.pendAmp, v -> s.pendAmp = v, 0.0, 100.0);
-        addNumber("cfg.textstudio.font.author.pend_speed", fieldX(2), fieldY(6), () -> s.pendSpeed, v -> s.pendSpeed = v, 0.0, 100.0);
-        addToggle("cfg.textstudio.font.author.orbit", fieldX(0), fieldY(7), () -> s.orbit, v -> s.orbit = v);
-        addNumber("cfg.textstudio.font.author.orbit_amp", fieldX(1), fieldY(7), () -> s.orbitAmp, v -> s.orbitAmp = v, 0.0, 20.0);
-        addNumber("cfg.textstudio.font.author.orbit_speed", fieldX(2), fieldY(7), () -> s.orbitSpeed, v -> s.orbitSpeed = v, 0.05, 20.0);
-        addToggle("cfg.textstudio.font.author.ripple", fieldX(0), fieldY(8), () -> s.ripple, v -> s.ripple = v);
-        addNumber("cfg.textstudio.font.author.ripple_amp", fieldX(1), fieldY(8), () -> s.rippleAmp, v -> s.rippleAmp = v, 0.0, 20.0);
-        addNumber("cfg.textstudio.font.author.ripple_speed", fieldX(2), fieldY(8), () -> s.rippleSpeed, v -> s.rippleSpeed = v, 0.05, 20.0);
-        addToggle("cfg.textstudio.font.author.drift", fieldX(0), fieldY(9), () -> s.drift, v -> s.drift = v);
-        addNumber("cfg.textstudio.font.author.drift_amp", fieldX(1), fieldY(9), () -> s.driftAmp, v -> s.driftAmp = v, 0.0, 20.0);
-        addNumber("cfg.textstudio.font.author.drift_speed", fieldX(2), fieldY(9), () -> s.driftSpeed, v -> s.driftSpeed = v, 0.05, 20.0);
+        beginColumns();
+        effect("cfg.textstudio.font.author.glitch", () -> s.glitch, v -> s.glitch = v);
+        option("cfg.textstudio.font.author.glitch_amp", () -> s.glitchAmp, v -> s.glitchAmp = v, 0.0, 100.0);
+        option("cfg.textstudio.font.author.glitch_speed", () -> s.glitchSpeed, v -> s.glitchSpeed = v, 0.0, 100.0);
+        option("cfg.textstudio.font.author.glitch_flicker", () -> s.glitchFlicker, v -> s.glitchFlicker = v, 0.0, 1.0);
+        nextColumn();
+        effect("cfg.textstudio.font.author.spasm", () -> s.spasm, v -> s.spasm = v);
+        option("cfg.textstudio.font.author.spasm_amp", () -> s.spasmAmp, v -> s.spasmAmp = v, 0.0, 100.0);
+        option("cfg.textstudio.font.author.spasm_speed", () -> s.spasmSpeed, v -> s.spasmSpeed = v, 0.0, 100.0);
+        effect("cfg.textstudio.font.author.typewriter", () -> s.typewriter, v -> s.typewriter = v);
+        option("cfg.textstudio.font.author.typewriter_speed", () -> s.typewriterSpeed, v -> s.typewriterSpeed = v, 0.1, 100.0);
+        optionToggle("cfg.textstudio.font.author.typewriter_back", () -> s.typewriterBack, v -> s.typewriterBack = v);
+        nextColumn();
+        effect("cfg.textstudio.font.author.blink_wave", () -> s.blinkWave, v -> s.blinkWave = v);
+        option("cfg.textstudio.font.author.blink_wave_speed", () -> s.blinkWaveSpeed, v -> s.blinkWaveSpeed = v, 0.05, 20.0);
+        option("cfg.textstudio.font.author.blink_wave_depth", () -> s.blinkWaveDepth, v -> s.blinkWaveDepth = v, 0.0, 1.0);
     }
 
-    private void buildSpecialTab() {
+    private void buildGlyphSection() {
         AuthorConfig.EffectSettings s = current();
-
-        addToggle("cfg.textstudio.font.author.glitch", fieldX(0), fieldY(0), () -> s.glitch, v -> s.glitch = v);
-        addNumber("cfg.textstudio.font.author.glitch_amp", fieldX(1), fieldY(0), () -> s.glitchAmp, v -> s.glitchAmp = v, 0.0, 100.0);
-        addNumber("cfg.textstudio.font.author.glitch_speed", fieldX(2), fieldY(0), () -> s.glitchSpeed, v -> s.glitchSpeed = v, 0.0, 100.0);
-        addNumber("cfg.textstudio.font.author.glitch_flicker", fieldX(0), fieldY(1), () -> s.glitchFlicker, v -> s.glitchFlicker = v, 0.0, 1.0);
-        addToggle("cfg.textstudio.font.author.spasm", fieldX(1), fieldY(1), () -> s.spasm, v -> s.spasm = v);
-        addNumber("cfg.textstudio.font.author.spasm_amp", fieldX(2), fieldY(1), () -> s.spasmAmp, v -> s.spasmAmp = v, 0.0, 100.0);
-        addNumber("cfg.textstudio.font.author.spasm_speed", fieldX(0), fieldY(2), () -> s.spasmSpeed, v -> s.spasmSpeed = v, 0.0, 100.0);
-        addToggle("cfg.textstudio.font.author.typewriter", fieldX(1), fieldY(2), () -> s.typewriter, v -> s.typewriter = v);
-        addNumber("cfg.textstudio.font.author.typewriter_speed", fieldX(2), fieldY(2), () -> s.typewriterSpeed, v -> s.typewriterSpeed = v, 0.1, 100.0);
-        addToggle("cfg.textstudio.font.author.typewriter_back", fieldX(0), fieldY(3), () -> s.typewriterBack, v -> s.typewriterBack = v);
-        addToggle("cfg.textstudio.font.author.blink_wave", fieldX(1), fieldY(3), () -> s.blinkWave, v -> s.blinkWave = v);
-        addNumber("cfg.textstudio.font.author.blink_wave_speed", fieldX(2), fieldY(3), () -> s.blinkWaveSpeed, v -> s.blinkWaveSpeed = v, 0.05, 20.0);
-        addNumber("cfg.textstudio.font.author.blink_wave_depth", fieldX(0), fieldY(4), () -> s.blinkWaveDepth, v -> s.blinkWaveDepth = v, 0.0, 1.0);
+        beginColumns();
+        effect("cfg.textstudio.font.author.glyph_scale", () -> s.glyphScale, v -> s.glyphScale = v);
+        option("cfg.textstudio.font.author.glyph_scale_amp", () -> s.glyphScaleAmp, v -> s.glyphScaleAmp = v, 0.0, 1.5);
+        option("cfg.textstudio.font.author.glyph_scale_speed", () -> s.glyphScaleSpeed, v -> s.glyphScaleSpeed = v, 0.05, 20.0);
+        effect("cfg.textstudio.font.author.ecg", () -> s.ecg, v -> s.ecg = v);
+        option("cfg.textstudio.font.author.ecg_amp", () -> s.ecgAmp, v -> s.ecgAmp = v, 0.0, 10.0);
+        option("cfg.textstudio.font.author.ecg_speed", () -> s.ecgSpeed, v -> s.ecgSpeed = v, 0.05, 20.0);
+        option("cfg.textstudio.font.author.ecg_width", () -> s.ecgWidth, v -> s.ecgWidth = v, 0.25, 12.0);
+        nextColumn();
+        effect("cfg.textstudio.font.author.heartbeat", () -> s.heartbeat, v -> s.heartbeat = v);
+        option("cfg.textstudio.font.author.heartbeat_amp", () -> s.heartbeatAmp, v -> s.heartbeatAmp = v, 0.0, 10.0);
+        option("cfg.textstudio.font.author.heartbeat_speed", () -> s.heartbeatSpeed, v -> s.heartbeatSpeed = v, 0.05, 20.0);
+        effect("cfg.textstudio.font.author.glitch_spike", () -> s.glitchSpike, v -> s.glitchSpike = v);
+        option("cfg.textstudio.font.author.glitch_spike_amp", () -> s.glitchSpikeAmp, v -> s.glitchSpikeAmp = v, 0.0, 10.0);
+        option("cfg.textstudio.font.author.glitch_spike_speed", () -> s.glitchSpikeSpeed, v -> s.glitchSpikeSpeed = v, 0.05, 20.0);
+        option("cfg.textstudio.font.author.glitch_spike_chance", () -> s.glitchSpikeChance, v -> s.glitchSpikeChance = v, 0.0, 1.0);
+        nextColumn();
+        effect("cfg.textstudio.font.author.signal_loss", () -> s.signalLoss, v -> s.signalLoss = v);
+        option("cfg.textstudio.font.author.signal_loss_chance", () -> s.signalLossChance, v -> s.signalLossChance = v, 0.0, 1.0);
+        option("cfg.textstudio.font.author.signal_loss_speed", () -> s.signalLossSpeed, v -> s.signalLossSpeed = v, 0.05, 20.0);
+        effect("cfg.textstudio.font.author.note_bounce", () -> s.noteBounce, v -> s.noteBounce = v);
+        option("cfg.textstudio.font.author.note_bounce_amp", () -> s.noteBounceAmp, v -> s.noteBounceAmp = v, 0.0, 10.0);
+        option("cfg.textstudio.font.author.note_bounce_speed", () -> s.noteBounceSpeed, v -> s.noteBounceSpeed = v, 0.05, 20.0);
     }
 
-    private void buildGlyphTab() {
+    private void buildVisualSection() {
         AuthorConfig.EffectSettings s = current();
-
-        addToggle("cfg.textstudio.font.author.glyph_scale", fieldX(0), fieldY(0), () -> s.glyphScale, v -> s.glyphScale = v);
-        addNumber("cfg.textstudio.font.author.glyph_scale_amp", fieldX(1), fieldY(0), () -> s.glyphScaleAmp, v -> s.glyphScaleAmp = v, 0.0, 1.5);
-        addNumber("cfg.textstudio.font.author.glyph_scale_speed", fieldX(2), fieldY(0), () -> s.glyphScaleSpeed, v -> s.glyphScaleSpeed = v, 0.05, 20.0);
-
-        addToggle("cfg.textstudio.font.author.ecg", fieldX(0), fieldY(1), () -> s.ecg, v -> s.ecg = v);
-        addNumber("cfg.textstudio.font.author.ecg_amp", fieldX(1), fieldY(1), () -> s.ecgAmp, v -> s.ecgAmp = v, 0.0, 10.0);
-        addNumber("cfg.textstudio.font.author.ecg_speed", fieldX(2), fieldY(1), () -> s.ecgSpeed, v -> s.ecgSpeed = v, 0.05, 20.0);
-        addNumber("cfg.textstudio.font.author.ecg_width", fieldX(0), fieldY(2), () -> s.ecgWidth, v -> s.ecgWidth = v, 0.25, 12.0);
-
-        addToggle("cfg.textstudio.font.author.heartbeat", fieldX(1), fieldY(2), () -> s.heartbeat, v -> s.heartbeat = v);
-        addNumber("cfg.textstudio.font.author.heartbeat_amp", fieldX(2), fieldY(2), () -> s.heartbeatAmp, v -> s.heartbeatAmp = v, 0.0, 10.0);
-        addNumber("cfg.textstudio.font.author.heartbeat_speed", fieldX(0), fieldY(3), () -> s.heartbeatSpeed, v -> s.heartbeatSpeed = v, 0.05, 20.0);
-
-        addToggle("cfg.textstudio.font.author.glitch_spike", fieldX(1), fieldY(3), () -> s.glitchSpike, v -> s.glitchSpike = v);
-        addNumber("cfg.textstudio.font.author.glitch_spike_amp", fieldX(2), fieldY(3), () -> s.glitchSpikeAmp, v -> s.glitchSpikeAmp = v, 0.0, 10.0);
-        addNumber("cfg.textstudio.font.author.glitch_spike_speed", fieldX(0), fieldY(4), () -> s.glitchSpikeSpeed, v -> s.glitchSpikeSpeed = v, 0.05, 20.0);
-        addNumber("cfg.textstudio.font.author.glitch_spike_chance", fieldX(1), fieldY(4), () -> s.glitchSpikeChance, v -> s.glitchSpikeChance = v, 0.0, 1.0);
-
-        addToggle("cfg.textstudio.font.author.signal_loss", fieldX(2), fieldY(4), () -> s.signalLoss, v -> s.signalLoss = v);
-        addNumber("cfg.textstudio.font.author.signal_loss_chance", fieldX(0), fieldY(5), () -> s.signalLossChance, v -> s.signalLossChance = v, 0.0, 1.0);
-        addNumber("cfg.textstudio.font.author.signal_loss_speed", fieldX(1), fieldY(5), () -> s.signalLossSpeed, v -> s.signalLossSpeed = v, 0.05, 20.0);
-
-        addToggle("cfg.textstudio.font.author.note_bounce", fieldX(2), fieldY(5), () -> s.noteBounce, v -> s.noteBounce = v);
-        addNumber("cfg.textstudio.font.author.note_bounce_amp", fieldX(0), fieldY(6), () -> s.noteBounceAmp, v -> s.noteBounceAmp = v, 0.0, 10.0);
-        addNumber("cfg.textstudio.font.author.note_bounce_speed", fieldX(1), fieldY(6), () -> s.noteBounceSpeed, v -> s.noteBounceSpeed = v, 0.05, 20.0);
+        beginColumns();
+        effect("cfg.textstudio.font.author.sweep", () -> s.sweep, v -> s.sweep = v);
+        option("cfg.textstudio.font.author.sweep_speed", () -> s.sweepSpeed, v -> s.sweepSpeed = v, 0.05, 20.0);
+        option("cfg.textstudio.font.author.sweep_width", () -> s.sweepWidth, v -> s.sweepWidth = v, 0.25, 12.0);
+        option("cfg.textstudio.font.author.sweep_strength", () -> s.sweepStrength, v -> s.sweepStrength = v, 0.0, 1.0);
+        effect("cfg.textstudio.font.author.outline", () -> s.outline, v -> s.outline = v);
+        option("cfg.textstudio.font.author.outline_width", () -> s.outlineWidth, v -> s.outlineWidth = v, 0.35, 2.5);
+        option("cfg.textstudio.font.author.outline_alpha", () -> s.outlineAlpha, v -> s.outlineAlpha = v, 0.0, 1.0);
+        nextColumn();
+        effect("cfg.textstudio.font.author.glow", () -> s.glow, v -> s.glow = v);
+        option("cfg.textstudio.font.author.glow_radius", () -> s.glowRadius, v -> s.glowRadius = v, 0.35, 3.0);
+        option("cfg.textstudio.font.author.glow_alpha", () -> s.glowAlpha, v -> s.glowAlpha = v, 0.0, 1.0);
+        effect("cfg.textstudio.font.author.trail", () -> s.trail, v -> s.trail = v);
+        option("cfg.textstudio.font.author.trail_strength", () -> s.trailStrength, v -> s.trailStrength = v, 0.0, 3.0);
+        option("cfg.textstudio.font.author.trail_alpha", () -> s.trailAlpha, v -> s.trailAlpha = v, 0.0, 1.0);
+        nextColumn();
+        effect("cfg.textstudio.font.author.extrude", () -> s.extrude, v -> s.extrude = v);
+        option("cfg.textstudio.font.author.extrude_depth", () -> s.extrudeDepth, v -> s.extrudeDepth = v, 0.25, 4.0);
+        option("cfg.textstudio.font.author.extrude_alpha", () -> s.extrudeAlpha, v -> s.extrudeAlpha = v, 0.0, 1.0);
     }
 
-    private void buildVisualTab() {
+    private void buildPaletteSection() {
         AuthorConfig.EffectSettings s = current();
-
-        addToggle("cfg.textstudio.font.author.sweep", fieldX(0), fieldY(0), () -> s.sweep, v -> s.sweep = v);
-        addNumber("cfg.textstudio.font.author.sweep_speed", fieldX(1), fieldY(0), () -> s.sweepSpeed, v -> s.sweepSpeed = v, 0.05, 20.0);
-        addNumber("cfg.textstudio.font.author.sweep_width", fieldX(2), fieldY(0), () -> s.sweepWidth, v -> s.sweepWidth = v, 0.25, 12.0);
-        addNumber("cfg.textstudio.font.author.sweep_strength", fieldX(0), fieldY(1), () -> s.sweepStrength, v -> s.sweepStrength = v, 0.0, 1.0);
-
-        addToggle("cfg.textstudio.font.author.outline", fieldX(1), fieldY(1), () -> s.outline, v -> s.outline = v);
-        addNumber("cfg.textstudio.font.author.outline_width", fieldX(2), fieldY(1), () -> s.outlineWidth, v -> s.outlineWidth = v, 0.35, 2.5);
-        addNumber("cfg.textstudio.font.author.outline_alpha", fieldX(0), fieldY(2), () -> s.outlineAlpha, v -> s.outlineAlpha = v, 0.0, 1.0);
-
-        addToggle("cfg.textstudio.font.author.glow", fieldX(1), fieldY(2), () -> s.glow, v -> s.glow = v);
-        addNumber("cfg.textstudio.font.author.glow_radius", fieldX(2), fieldY(2), () -> s.glowRadius, v -> s.glowRadius = v, 0.35, 3.0);
-        addNumber("cfg.textstudio.font.author.glow_alpha", fieldX(0), fieldY(3), () -> s.glowAlpha, v -> s.glowAlpha = v, 0.0, 1.0);
-
-        addToggle("cfg.textstudio.font.author.trail", fieldX(1), fieldY(3), () -> s.trail, v -> s.trail = v);
-        addNumber("cfg.textstudio.font.author.trail_strength", fieldX(2), fieldY(3), () -> s.trailStrength, v -> s.trailStrength = v, 0.0, 3.0);
-        addNumber("cfg.textstudio.font.author.trail_alpha", fieldX(0), fieldY(4), () -> s.trailAlpha, v -> s.trailAlpha = v, 0.0, 1.0);
-
-        addToggle("cfg.textstudio.font.author.extrude", fieldX(1), fieldY(4), () -> s.extrude, v -> s.extrude = v);
-        addNumber("cfg.textstudio.font.author.extrude_depth", fieldX(2), fieldY(4), () -> s.extrudeDepth, v -> s.extrudeDepth = v, 0.25, 4.0);
-        addNumber("cfg.textstudio.font.author.extrude_alpha", fieldX(0), fieldY(5), () -> s.extrudeAlpha, v -> s.extrudeAlpha = v, 0.0, 1.0);
-    }
-
-    private void buildPaletteTab() {
-        AuthorConfig.EffectSettings s = current();
-        addToggle("gui.textstudio.font.editor.palette.enabled", fieldX(0), fieldY(0), () -> s.palette, v -> s.palette = v);
-        addNumber("gui.textstudio.font.editor.palette.speed", fieldX(1), fieldY(0), () -> s.paletteSpeed, v -> s.paletteSpeed = v, 0.0, 100.0);
-        addNumber("gui.textstudio.font.editor.palette.spread", fieldX(2), fieldY(0), () -> s.paletteSpread, v -> s.paletteSpread = v, 0.0, 10.0);
-        addToggle("gui.textstudio.font.editor.palette.flash", fieldX(0), fieldY(1), () -> s.paletteFlash, v -> s.paletteFlash = v);
+        beginColumns();
+        effect("gui.textstudio.font.editor.palette.enabled", () -> s.palette, v -> s.palette = v);
+        option("gui.textstudio.font.editor.palette.speed", () -> s.paletteSpeed, v -> s.paletteSpeed = v, 0.0, 100.0);
+        option("gui.textstudio.font.editor.palette.spread", () -> s.paletteSpread, v -> s.paletteSpread = v, 0.0, 10.0);
+        optionToggle("gui.textstudio.font.editor.palette.flash", () -> s.paletteFlash, v -> s.paletteFlash = v);
 
         addActionButton(
+                listUi,
                 KineticI18n.translatable("gui.textstudio.font.editor.palette.open"),
                 fieldX(1),
-                fieldY(1),
+                SETTINGS_TOP + sectionTop,
                 145,
-                18,
                 this::openPaletteEditor,
                 KineticI18n.translatable("gui.textstudio.font.editor.tip.palette_open")
         );
-        fieldLabels.add(new FieldLabel(KineticI18n.translatable("gui.textstudio.font.editor.palette.current"), PALETTE_SWATCH_X, PALETTE_SWATCH_Y - 17, 225));
-        registerTip(
+        // Below the palette button: the label, then the colors, in the second column.
+        fieldLabels.add(new FieldLabel(KineticI18n.translatable("gui.textstudio.font.editor.palette.current"),
+                PALETTE_SWATCH_X, sectionTop + FIELD_ROW, 225));
+        paletteSwatchY = sectionTop + 2 * FIELD_ROW;
+        sectionBottom = Math.max(sectionBottom, paletteSwatchY + paletteSwatchesHeight());
+        registerListTip(
                 PALETTE_SWATCH_X,
-                PALETTE_SWATCH_Y,
+                paletteSwatchY,
                 225,
-                40,
+                paletteSwatchesHeight(),
                 KineticI18n.translatable("gui.textstudio.font.editor.tip.palette_swatches")
         );
+    }
+
+    /** Lays a category's effects out from the top of its first column. */
+    private void beginColumns() {
+        layoutColumn = 0;
+        layoutY = sectionTop;
+    }
+
+    /** The effects after this go into the next column, from the top of the category. */
+    private void nextColumn() {
+        layoutColumn++;
+        layoutY = sectionTop;
+    }
+
+    /** An effect's switch; the settings added after it belong to it and sit indented beneath it. */
+    private void effect(String key, BooleanSupplier getter, Consumer<Boolean> setter) {
+        if (layoutY > sectionTop) {
+            layoutY += GROUP_GAP;
+        }
+        addToggle(key, fieldX(layoutColumn), layoutY, 0, getter, setter);
+        nextRow();
+    }
+
+    /** A number setting of the effect above it. */
+    private void option(String key, DoubleSupplier getter, DoubleConsumer setter, double min, double max) {
+        addNumber(key, fieldX(layoutColumn), layoutY, GROUP_INDENT, getter, setter, min, max);
+        nextRow();
+    }
+
+    /** An on/off setting of the effect above it. */
+    private void optionToggle(String key, BooleanSupplier getter, Consumer<Boolean> setter) {
+        addToggle(key, fieldX(layoutColumn), layoutY, GROUP_INDENT, getter, setter);
+        nextRow();
+    }
+
+    private void nextRow() {
+        sectionBottom = Math.max(sectionBottom, layoutY + FIELD_ROW - 2);
+        layoutY += FIELD_ROW;
     }
 
     private void openPaletteEditor() {
@@ -539,11 +592,11 @@ public final class FontModuleConfigPage extends KineticPage {
         );
     }
 
-    private void addToggle(String key, int x, int y, BooleanSupplier getter, Consumer<Boolean> setter) {
+    private void addToggle(String key, int x, int y, int indent, BooleanSupplier getter, Consumer<Boolean> setter) {
         Component label = KineticI18n.translatable(key);
-        fieldLabels.add(new FieldLabel(label, x, y + 3, FIELD_LABEL_W));
+        fieldLabels.add(new FieldLabel(label, x + indent, y, FIELD_LABEL_W - indent));
         boolean value = getter.getAsBoolean();
-        ui().button(x + FIELD_CONTROL_OFFSET, y, FIELD_CONTROL_W)
+        listUi.button(x + FIELD_CONTROL_OFFSET, SETTINGS_TOP + y, FIELD_CONTROL_W)
                 .text(KineticI18n.translatable(value ? "gui.textstudio.font.editor.state.on" : "gui.textstudio.font.editor.state.off"))
                 .onClick(() -> {
                     setter.accept(!getter.getAsBoolean());
@@ -551,19 +604,19 @@ public final class FontModuleConfigPage extends KineticPage {
                     rebuild();
                 })
                 .build();
-        registerTip(
-                x,
+        registerListTip(
+                x + indent,
                 y - 1,
-                FIELD_CONTROL_OFFSET + FIELD_CONTROL_W,
+                FIELD_CONTROL_OFFSET + FIELD_CONTROL_W - indent,
                 FIELD_H + 2,
                 optionToggleTip(key, label)
         );
     }
 
-    private void addNumber(String key, int x, int y, DoubleSupplier getter, DoubleConsumer setter, double min, double max) {
+    private void addNumber(String key, int x, int y, int indent, DoubleSupplier getter, DoubleConsumer setter, double min, double max) {
         Component label = KineticI18n.translatable(key);
-        fieldLabels.add(new FieldLabel(label, x, y + 3, FIELD_LABEL_W));
-        KineticNumberField box = ui().numberField(x + FIELD_CONTROL_OFFSET, y, FIELD_CONTROL_W, NumberType.DECIMAL)
+        fieldLabels.add(new FieldLabel(label, x + indent, y, FIELD_LABEL_W - indent));
+        KineticNumberField box = listUi.numberField(x + FIELD_CONTROL_OFFSET, SETTINGS_TOP + y, FIELD_CONTROL_W, NumberType.DECIMAL)
                 .label(label)
                 .allowNegative(false)
                 .range(min, max)
@@ -575,10 +628,10 @@ public final class FontModuleConfigPage extends KineticPage {
                 setter.accept(parsed);
             }
         });
-        registerTip(
-                x,
+        registerListTip(
+                x + indent,
                 y - 1,
-                FIELD_CONTROL_OFFSET + FIELD_CONTROL_W,
+                FIELD_CONTROL_OFFSET + FIELD_CONTROL_W - indent,
                 FIELD_H + 2,
                 optionNumberTip(key, label, min, max)
         );
@@ -621,7 +674,6 @@ public final class FontModuleConfigPage extends KineticPage {
         draftEffects.add(new AuthorConfig.EffectSettings());
         selectedPreset = draftEffects.size() - 1;
         presetScrollOffset = Integer.MAX_VALUE;
-        tab = EditorTab.COLOR;
         closeContextMenu();
         rebuild();
     }
@@ -698,20 +750,31 @@ public final class FontModuleConfigPage extends KineticPage {
         KineticTheme.surface(graphics, EDITOR_X, EDITOR_Y, EDITOR_W - 1, EDITOR_H - 1, KineticTheme.Surface.PANEL);
         KineticTheme.verticalSeparator(graphics, PREVIEW_X - 2, 1, height() - 2);
         KineticTheme.separator(graphics, PREVIEW_X, EDITOR_Y - 2, PREVIEW_W - 1);
-        if (categoryMenuOpen) {
-            KineticTheme.panel(graphics, CATEGORY_X, CATEGORY_MENU_Y, CATEGORY_W, CATEGORY_MENU_H);
-        }
     }
 
     @Override
     protected void renderForeground(KineticGraphics graphics, int mouseX, int mouseY, float partialTick) {
 
-        for (FieldLabel label : fieldLabels) {
-            graphics.scrollingText(label.component(), label.x(), label.y(), label.maxWidth(), 0xFFFFFF, false);
-        }
-
-        if (!categoryMenuOpen && tab == EditorTab.PALETTE) {
+        // The list's text is cut at its edges like its controls, so rows slide in and out whole.
+        graphics.clipped(EDITOR_X, SETTINGS_TOP, SETTINGS_SCROLLBAR_X - 2, SETTINGS_BOTTOM, () -> {
+            for (SectionHeading heading : sectionHeadings) {
+                int y = listY(heading.y());
+                if (y < SETTINGS_BOTTOM && y + SECTION_HEADING_H > SETTINGS_TOP) {
+                    graphics.scrollingText(heading.title(), FIELD_COL_1_X, y + 2, SETTINGS_SCROLLBAR_X - 4 - FIELD_COL_1_X,
+                            SECTION_HEADING_COLOR, false);
+                }
+            }
+            for (FieldLabel label : fieldLabels) {
+                int y = listY(label.y());
+                if (y < SETTINGS_BOTTOM && y + FIELD_H > SETTINGS_TOP) {
+                    graphics.scrollingText(label.component(), label.x(), y + 3, label.maxWidth(), 0xFFFFFF, false);
+                }
+            }
             renderPalette(graphics);
+        });
+        if (settingsScroll.canScroll()) {
+            settingsScroll.render(graphics, mouseX, mouseY, SETTINGS_SCROLLBAR_X, SETTINGS_TOP, SETTINGS_SCROLLBAR_W,
+                    SETTINGS_BOTTOM - SETTINGS_TOP, 14);
         }
 
         renderPreview(graphics, mouseX, mouseY);
@@ -802,30 +865,29 @@ public final class FontModuleConfigPage extends KineticPage {
 
     private void renderPalette(KineticGraphics graphics) {
         List<Integer> colors = parsePalette(current().paletteColors);
+        int top = listY(paletteSwatchY);
         if (colors.isEmpty()) {
-            graphics.scrollingText(KineticI18n.translatable("gui.textstudio.font.editor.palette.empty_short"), PALETTE_SWATCH_X, PALETTE_SWATCH_Y + 3, 225, 0xFFFFFF, false);
+            graphics.scrollingText(KineticI18n.translatable("gui.textstudio.font.editor.palette.empty_short"), PALETTE_SWATCH_X, top + 3, 225, 0xFFFFFF, false);
             return;
         }
         for (int i = 0; i < colors.size(); i++) {
             int col = i % PALETTE_SWATCH_COLS;
             int row = i / PALETTE_SWATCH_COLS;
             int x = PALETTE_SWATCH_X + col * (PALETTE_SWATCH_CELL + PALETTE_SWATCH_GAP);
-            int y = PALETTE_SWATCH_Y + row * (PALETTE_SWATCH_CELL + PALETTE_SWATCH_GAP);
+            int y = top + row * (PALETTE_SWATCH_CELL + PALETTE_SWATCH_GAP);
             KineticTheme.colorSwatch(graphics, x, y, PALETTE_SWATCH_CELL, PALETTE_SWATCH_CELL, colors.get(i), true);
         }
+    }
+
+    /** Room the palette colors take: two rows of swatches, enough for the most a palette holds. */
+    private static int paletteSwatchesHeight() {
+        int rows = (MAX_PALETTE_COLORS + PALETTE_SWATCH_COLS - 1) / PALETTE_SWATCH_COLS;
+        return rows * PALETTE_SWATCH_CELL + (rows - 1) * PALETTE_SWATCH_GAP;
     }
 
 
     @Override
     protected void renderTooltips(int scaledMouseX, int scaledMouseY) {
-        if (categoryMenuOpen) {
-            Component categoryTip = findCategoryTooltip(scaledMouseX, scaledMouseY);
-            if (categoryTip != null) {
-                showTooltip(categoryTip);
-            }
-            return;
-        }
-
         Component dynamic = findDynamicTooltip(scaledMouseX, scaledMouseY);
         if (dynamic != null) {
             showTooltip(dynamic);
@@ -834,60 +896,29 @@ public final class FontModuleConfigPage extends KineticPage {
 
         for (int i = hoverTips.size() - 1; i >= 0; i--) {
             HoverTip tip = hoverTips.get(i);
-            if (KineticTheme.hovering(scaledMouseX, scaledMouseY, tip.x(), tip.y(), tip.w(), tip.h())) {
+            if (tip.inList() && !overList(scaledMouseX, scaledMouseY)) {
+                continue;
+            }
+            int tipY = tip.inList() ? listY(tip.y()) : tip.y();
+            if (KineticTheme.hovering(scaledMouseX, scaledMouseY, tip.x(), tipY, tip.w(), tip.h())) {
                 showTooltip(tip.text());
                 return;
             }
         }
     }
 
-    private Component findCategoryTooltip(int mouseX, int mouseY) {
-        if (KineticTheme.hovering(mouseX, mouseY, CATEGORY_X, CATEGORY_Y, CATEGORY_W, CATEGORY_H)) {
-            return KineticI18n.translatable("gui.textstudio.font.editor.tip.category_selector");
-        }
-        if (!KineticTheme.hovering(mouseX, mouseY, CATEGORY_X, CATEGORY_MENU_Y, CATEGORY_W, CATEGORY_MENU_H)) {
-            return null;
-        }
-        int row = (mouseY - (CATEGORY_MENU_Y + 2)) / CATEGORY_MENU_ROW_H;
-        EditorTab[] values = EditorTab.values();
-        if (row < 0 || row >= values.length) {
-            return null;
-        }
-        int buttonY = CATEGORY_MENU_Y + 2 + row * CATEGORY_MENU_ROW_H;
-        if (!KineticTheme.hovering(mouseX, mouseY, CATEGORY_X + 3, buttonY, CATEGORY_W - 6, 18)) {
-            return null;
-        }
-        return KineticI18n.translatable("gui.textstudio.font.editor.tip.tab", tabLabel(values[row]));
-    }
-
     private Component findDynamicTooltip(int mouseX, int mouseY) {
-        if (tab == EditorTab.PALETTE) {
-            int swatchIndex = paletteSwatchIndexAt(mouseX, mouseY);
-            if (swatchIndex >= 0) {
-                List<Integer> colors = parsePalette(current().paletteColors);
-                if (swatchIndex < colors.size()) {
-                    return KineticI18n.translatable(
-                            "gui.textstudio.font.editor.tip.palette_color",
-                            String.format(Locale.ROOT, "%06X", colors.get(swatchIndex) & 0xFFFFFF)
-                    );
-                }
+        int swatchIndex = paletteSwatchIndexAt(mouseX, mouseY);
+        if (swatchIndex >= 0) {
+            List<Integer> colors = parsePalette(current().paletteColors);
+            if (swatchIndex < colors.size()) {
+                return KineticI18n.translatable(
+                        "gui.textstudio.font.editor.tip.palette_color",
+                        String.format(Locale.ROOT, "%06X", colors.get(swatchIndex) & 0xFFFFFF)
+                );
             }
         }
         return null;
-    }
-
-    @Override
-    protected boolean onMouseClickCapture(MouseInput input) {
-        if (categoryMenuOpen) {
-            boolean inSelector = input.inside(CATEGORY_X, CATEGORY_Y, CATEGORY_W, CATEGORY_H);
-            boolean inMenu = input.inside(CATEGORY_X, CATEGORY_MENU_Y, CATEGORY_W, CATEGORY_MENU_H);
-            if (!inSelector && !inMenu) {
-                categoryMenuOpen = false;
-                rebuild();
-                return true;
-            }
-        }
-        return false;
     }
 
     @Override
@@ -895,7 +926,7 @@ public final class FontModuleConfigPage extends KineticPage {
         double mouseX = input.x();
         double mouseY = input.y();
         if (input.isRight()) {
-            if (tab == EditorTab.PALETTE && paletteSwatchIndexAt(mouseX, mouseY) >= 0) {
+            if (paletteSwatchIndexAt(mouseX, mouseY) >= 0) {
                 openPaletteEditor();
                 return true;
             }
@@ -907,7 +938,12 @@ public final class FontModuleConfigPage extends KineticPage {
                 previewScrollbarDragging = true;
                 return true;
             }
-            if (tab == EditorTab.PALETTE && paletteSwatchIndexAt(mouseX, mouseY) >= 0) {
+            if (settingsScroll.canScroll() && settingsScroll.beginDrag(mouseX, mouseY, input.button(),
+                    SETTINGS_SCROLLBAR_X - 2, SETTINGS_TOP, SETTINGS_SCROLLBAR_W + 4, SETTINGS_BOTTOM - SETTINGS_TOP, 14)) {
+                settingsScrollbarDragging = true;
+                return true;
+            }
+            if (paletteSwatchIndexAt(mouseX, mouseY) >= 0) {
                 openPaletteEditor();
                 return true;
             }
@@ -922,6 +958,11 @@ public final class FontModuleConfigPage extends KineticPage {
             previewScroll.release(input.button());
             return true;
         }
+        if (settingsScrollbarDragging) {
+            settingsScrollbarDragging = false;
+            settingsScroll.release(input.button());
+            return true;
+        }
         return false;
     }
 
@@ -929,6 +970,10 @@ public final class FontModuleConfigPage extends KineticPage {
     protected boolean onMouseDrag(MouseDragInput input) {
         if (previewScrollbarDragging) {
             previewScroll.drag(input.y(), PREVIEW_CONTENT_Y, PREVIEW_CONTENT_H, 14);
+            return true;
+        }
+        if (settingsScrollbarDragging) {
+            settingsScroll.drag(input.y(), SETTINGS_TOP, SETTINGS_BOTTOM - SETTINGS_TOP, 14);
             return true;
         }
         return false;
@@ -940,16 +985,23 @@ public final class FontModuleConfigPage extends KineticPage {
             previewScroll.scroll(input.deltaY());
             return true;
         }
+        if (input.inside(EDITOR_X, SETTINGS_TOP, EDITOR_W, SETTINGS_BOTTOM - SETTINGS_TOP) && settingsScroll.canScroll()) {
+            settingsScroll.scroll(input.deltaY(), SETTINGS_WHEEL_STEP);
+            return true;
+        }
         return false;
     }
 
     private int paletteSwatchIndexAt(double mouseX, double mouseY) {
+        if (!overList(mouseX, mouseY)) {
+            return -1;
+        }
         List<Integer> colors = parsePalette(current().paletteColors);
         for (int i = 0; i < colors.size(); i++) {
             int col = i % PALETTE_SWATCH_COLS;
             int row = i / PALETTE_SWATCH_COLS;
             int x = PALETTE_SWATCH_X + col * (PALETTE_SWATCH_CELL + PALETTE_SWATCH_GAP);
-            int y = PALETTE_SWATCH_Y + row * (PALETTE_SWATCH_CELL + PALETTE_SWATCH_GAP);
+            int y = listY(paletteSwatchY) + row * (PALETTE_SWATCH_CELL + PALETTE_SWATCH_GAP);
             if (KineticTheme.hovering(mouseX, mouseY, x, y, PALETTE_SWATCH_CELL, PALETTE_SWATCH_CELL)) {
                 return i;
             }

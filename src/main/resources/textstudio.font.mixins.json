@@ -21,6 +21,11 @@
     "client.ChatComponentMixin",
     "client.GuiGraphicsMixin",
     "client.EditBoxTextLengthMixin",
-    "client.SignEditTextInputMixin"
+    "client.SignEditTextInputMixin",
+    "client.TextFieldHelperAccess",
+    "client.StringSplitterEffectMixin",
+    "client.MultiLineEditBoxEffectMixin",
+    "client.FontSplitEffectMixin",
+    "client.BookEditScreenEffectMixin"
   ]
 }

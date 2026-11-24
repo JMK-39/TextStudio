@@ -80,6 +80,26 @@ public final class TextProcessor {
         return true;
     }
 
+    /**
+     * {@code style} with the effect of an effect code (a preset or custom code as text holds it) taken in; native
+     * formatting stays as it is. Anything else leaves the style unchanged.
+     */
+    public static Style withEffectCode(Style style, String code) {
+        CompactTagCodec.PresetToken preset = CompactTagCodec.readPreset(code, 0);
+        if (preset != null) {
+            return copyWithEffect(style, new IStyle.TextEffectStyleData(
+                    preset.presetId(), false, false, false, false, false, advancedAllowed(style)));
+        }
+        CompactTagCodec.CustomToken custom = CompactTagCodec.readCustom(code, 0);
+        if (custom != null) {
+            boolean advancedAllowed = advancedAllowed(style);
+            IStyle.TextEffectStyleData data = new IStyle.TextEffectStyleData(1, false, false, false, false, false, advancedAllowed);
+            data.customConfig = advancedAllowed ? custom.settings() : AuthorConfig.toPublicSafeSettings(custom.settings());
+            return copyWithEffect(style, data);
+        }
+        return style;
+    }
+
     public static boolean hasMarkers(String text) {
         return CompactTagCodec.hasMarker(text);
     }

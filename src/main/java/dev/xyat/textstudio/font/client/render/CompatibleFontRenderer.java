@@ -163,6 +163,20 @@ public final class CompatibleFontRenderer {
         return render(font, context, x, y, color, shadow, out);
     }
 
+    /**
+     * Glowing sign text with effects: every glyph is drawn with vanilla's eight-direction outline around it, so moving
+     * letters keep theirs. Returns whether it drew; false leaves the text to vanilla.
+     */
+    public static boolean tryRenderOutlined(Font font, FormattedCharSequence sequence, float x, float y, int color, int outlineColor,
+                                            Matrix4fc matrix, MultiBufferSource buffers, int packedLight) {
+        RenderContext context = CONTEXT.get();
+        if (context.rendering) {
+            return false;
+        }
+        BufferGlyphOut out = context.bufferOut.set(matrix, buffers, Font.DisplayMode.POLYGON_OFFSET, 0, packedLight).outlined(outlineColor);
+        return tryRenderSequence(font, sequence, x, y, color, false, out) != null;
+    }
+
     public static Integer tryMeasureSequence(Font font, FormattedCharSequence sequence) {
         RenderContext context = CONTEXT.get();
         if (context.rendering || sequence == null) {
@@ -615,6 +629,8 @@ public final class CompatibleFontRenderer {
         private Font.DisplayMode mode;
         private int backgroundColor;
         private int packedLight;
+        private boolean outlined;
+        private int outlineColor;
 
         private BufferGlyphOut set(Matrix4fc matrix, MultiBufferSource buffers, Font.DisplayMode mode, int backgroundColor, int packedLight) {
             this.matrix = matrix;
@@ -622,6 +638,14 @@ public final class CompatibleFontRenderer {
             this.mode = mode;
             this.backgroundColor = backgroundColor;
             this.packedLight = packedLight;
+            this.outlined = false;
+            return this;
+        }
+
+        /** Glowing sign text: the main pass of each glyph gets the outline, the extra effect passes do not. */
+        private BufferGlyphOut outlined(int outlineColor) {
+            this.outlined = true;
+            this.outlineColor = outlineColor;
             return this;
         }
 
@@ -650,6 +674,10 @@ public final class CompatibleFontRenderer {
         @Override
         public void draw(Font font, FormattedCharSequence text, float x, float y, int color, boolean shadow, boolean background,
                          float scale, float centerX, float centerY) {
+            if (outlined && background) {
+                font.drawInBatch8xOutline(text, x, y, color, outlineColor, drawMatrix(scale, centerX, centerY), buffers, packedLight);
+                return;
+            }
             font.drawInBatch(text, x, y, color, shadow, drawMatrix(scale, centerX, centerY), buffers, mode,
                     background ? backgroundColor : 0, packedLight);
         }
