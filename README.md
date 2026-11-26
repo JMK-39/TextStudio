@@ -8,14 +8,10 @@ Text Studio combines animated text authoring, player display-name styling, and c
 
 Type your announcement into the live preview. Select Elegant Wave, then Typewriter, and watch the same text change as each preset animates.
 
-![Entering a sample line and switching the live preview from Elegant Wave to Typewriter](https://raw.githubusercontent.com/wiki/JMK-39/TextStudio/media/tutorials-20261126/en.gif)
+![Entering a sample line and switching the live preview from Elegant Wave to Typewriter](https://raw.githubusercontent.com/wiki/JMK-39/TextStudio/media/bilingual-editors/TextStudio/en.gif)
 
-<details>
-<summary>Full walkthrough with Mandarin narration</summary>
+[Watch with English narration](https://raw.githubusercontent.com/wiki/JMK-39/TextStudio/media/bilingual-editors/TextStudio/en.mp4) · [Download English subtitles](https://raw.githubusercontent.com/wiki/JMK-39/TextStudio/media/bilingual-editors/TextStudio/en.srt)
 
-https://github.com/user-attachments/assets/728d150b-fc11-4c93-8925-cfe02079621f
-
-</details>
 
 [Editor guide](https://github.com/JMK-39/TextStudio/wiki/Text-Effects)
 
@@ -35,14 +31,10 @@ Text Studio 整合动态文字制作、玩家显示名称样式与聊天增强�
 
 在预览框输入「遗迹已发现 · 启程」，先选「优雅波浪」，再换成「剧情打字机」。同一行文字会按选中的预设实时播放动画。
 
-![输入试读文字，并在实时预览中先选优雅波浪、再选剧情打字机的实录](https://raw.githubusercontent.com/wiki/JMK-39/TextStudio/media/tutorials-20261126/zh.gif)
+![输入试读文字，并在实时预览中先选优雅波浪、再选剧情打字机的实录](https://raw.githubusercontent.com/wiki/JMK-39/TextStudio/media/bilingual-editors/TextStudio/zh.gif)
 
-<details>
-<summary>播放完整普通话讲解</summary>
+[观看中文配音版](https://raw.githubusercontent.com/wiki/JMK-39/TextStudio/media/bilingual-editors/TextStudio/zh.mp4) · [下载中文字幕](https://raw.githubusercontent.com/wiki/JMK-39/TextStudio/media/bilingual-editors/TextStudio/zh.srt)
 
-https://github.com/user-attachments/assets/728d150b-fc11-4c93-8925-cfe02079621f
-
-</details>
 
 [编辑器使用指南](https://github.com/JMK-39/TextStudio/wiki/%E6%96%87%E5%AD%97%E6%95%88%E6%9E%9C)
 
